@@ -5,9 +5,32 @@ inspection capabilities that can be applied to any user-defined event. In other 
 event-based monitoring, as long as it can receive and interpret events received from an external source (which we
 refer to as a [sensor](#sensors)).
 
+### Install
+
+Alca binaries for Windows and Linux (64-bit / 32-bit) are provided in the 
+[Releases](https://github.com/badhive/alca/releases/latest) page. To build the project yourself, you will need
+Git, a C compiler (gcc, MinGW, MSVC) and CMake installed. 
+
+```sh
+# clone the repository
+git clone https://github.com/badhive/alca
+cd alca
+
+# fetch missing dependencies
+git submodule update --init
+
+# build
+cmake -B build . 
+cmake --build build/
+```
+
+The executable will be located in the `./build` directory.
+
+### Rules and Sequences
+
 Writing rules and sequences is simple and intuitive. Have a look at the examples in the following sections.
 
-### Rules
+#### Rules
 
 An ALCA rule will typically include an **event type** that is being monitored, and a **condition** which makes use of
 the received event's properties. Here's an example:
@@ -31,7 +54,7 @@ notification:
 [2025-01-01 00:00:00] [rule] name = "detect_foo_ransomware"
 ```
 
-### Sequences
+#### Sequences
 
 In ALCA, a sequence is a set of rules that must be satisfied in the order that they appear, within an optional time frame. 
 A sequence is evaluated to `true` when this happens. This behaviour is similar to Elastic EQL's 
