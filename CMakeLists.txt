@@ -4,7 +4,6 @@ project(alca C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-
 set(ALCA_SOURCES libalca/lexer.c
         libalca/utils.c
         libalca/parser.c
@@ -18,6 +17,10 @@ set(ALCA_SOURCES libalca/lexer.c
         libalca/bytecode.c
         libalca/vm.c
 )
+
+set (ALCA_CLI_SOURCES cli/cli.c
+        cli/cli.h)
+
 set(ALCA_INCLUDES "${CMAKE_SOURCE_DIR}/libalca/include"
         "${CMAKE_SOURCE_DIR}/libs/include"
 )
@@ -30,23 +33,28 @@ add_compile_definitions(PCRE2_CODE_UNIT_WIDTH=8)
 
 # Libraries
 
-## alca(-static)
-add_library(alca STATIC ${ALCA_SOURCES})
-target_include_directories(alca PUBLIC ${ALCA_INCLUDES})
-target_compile_definitions(alca PUBLIC ALCA_BUILD_STATIC)
-target_link_libraries(alca pcre2-8-static)
+## alca-static
+add_library(alca-static STATIC ${ALCA_SOURCES})
+target_include_directories(alca-static PUBLIC ${ALCA_INCLUDES})
+target_compile_definitions(alca-static PUBLIC ALCA_BUILD_STATIC
+        "ALCA_BUILD_DEBUG=$<CONFIG:Debug>")
+target_link_libraries(alca-static pcre2-8-static)
 
 ## alca-shared
 add_library(alca-shared SHARED ${ALCA_SOURCES})
 target_include_directories(alca-shared PRIVATE ${ALCA_INCLUDES})
-target_compile_definitions(alca-shared PRIVATE ALCA_BUILD_DLL)
+target_compile_definitions(alca-shared PRIVATE ALCA_BUILD_DLL
+        "ALCA_BUILD_DEBUG=$<CONFIG:Debug>")
 target_link_libraries(alca-shared pcre2-8-static)
+
+## alca cli
+add_executable(alca cli/alca.c ${ALCA_CLI_SOURCES})
+target_link_libraries(alca PRIVATE alca-static)
 
 # Tests
 include(CTest)
 add_library(testalca STATIC tests/test.c tests/test.h)
-target_compile_definitions(alca PUBLIC ALCA_BUILD_DEBUG)
-target_link_libraries(testalca PUBLIC alca)
+target_link_libraries(testalca PUBLIC alca-static)
 
 # Lexer
 add_executable(test_lexer tests/test_lexer.c)

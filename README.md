@@ -2,7 +2,7 @@
 
 ALCA is a modular rule engine built for dynamic malware analysis. Inspired by YARA, ALCA features a rich set of
 inspection capabilities that can be applied to any user-defined event. In other words, ALCA can be used for general
-event-based monitoring, as long as it can receive and interpret events received from an external source (which we
+event-based monitoring, as long as it can receive and interpret events from an external source (which we
 refer to as a [sensor](#sensors)).
 
 ### Install
@@ -21,7 +21,7 @@ git submodule update --init
 
 # build
 cmake -B build . 
-cmake --build build/
+cmake --build build/ --target alca alcac
 ```
 
 The executable will be located in the `./build` directory.
@@ -110,6 +110,6 @@ your own. The **documentation** outlines how this can be done.
 
 ### Credits / References / Inspirations
 
-- https://github.com/PCRE2Project/pcre2 regex library
+- https://github.com/PCRE2Project/pcre2 Regex library
 - https://github.com/VirusTotal/yara YARA, static analysis engine
 - https://www.elastic.co/guide/en/elasticsearch/reference/current/eql.html Elastic EQL

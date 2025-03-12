@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VM_ACCUM_MAX 4
 #define VM_MAX_CALLBACKS 10
 
-#ifdef ALCA_BUILD_DEBUG
+#if(ALCA_BUILD_DEBUG == 1)
 #define DBGPRINT(...) vm_debug_print(__VA_ARGS__)
 #else
 #define DBGPRINT(...)
