@@ -1,0 +1,5 @@
+event file
+
+rule detect_dropper : file {
+    file.size > 10000 and file.extension == "exe"
+}

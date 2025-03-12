@@ -1,0 +1,9 @@
+event file
+
+rule invalid_rule : file {
+    file.name == 4 and
+    not file.size + 5 and
+    file.size + 200 > file.size and
+    file.extension or file.name and
+    file
+}

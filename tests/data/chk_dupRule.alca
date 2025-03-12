@@ -1,0 +1,13 @@
+event file
+
+rule priv : file {
+    file.size > 10000
+}
+
+rule dup : file {
+    file.name == "mimikatz.exe" and priv
+}
+
+rule dup : file {
+    file.name == "rubeus.exe"
+}

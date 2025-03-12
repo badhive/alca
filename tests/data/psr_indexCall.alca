@@ -1,0 +1,5 @@
+event file
+
+rule check_section_hash : file {
+    file.sections[0].crc32(0, 100) == 0xdeadbeef
+}

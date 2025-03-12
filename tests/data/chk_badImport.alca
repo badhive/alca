@@ -1,0 +1,9 @@
+rule catch_dumb_names {
+    file.action == file.FILE_CREATE and file.name == "mimikatz.exe"
+}
+
+rule catch_ransomware {
+    file.action == file.FILE_RENAME and not
+    (file.extension == "exe" or
+    file.extension == "dll")
+}

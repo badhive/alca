@@ -1,0 +1,10 @@
+event file
+
+// evaluates the following complex rule
+
+rule complex_eval : file {
+    file.extension == "exe" and not file.size > 100000 and
+    file.FILE_CREATE | 20 < ( 2 + file.FILE_MODIFY & ~23 % 0x234 ) or
+    file.name != "kernel32.dll" or not file.path == "C:\\Windows\\temp\\file.tmp" and
+    file.sections[0].size + 200 > 1000 << 2
+}

@@ -1,0 +1,6 @@
+event file
+
+rule file_name : file {
+    file.name == "rubeus.exe" or file.size > 2000 and
+    file.extension != "exe"
+}

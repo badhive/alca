@@ -1,0 +1,5 @@
+event file
+
+rule not_boolean : file {
+    1 + 2 + file.FILE_CREATE
+}

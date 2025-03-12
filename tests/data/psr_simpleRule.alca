@@ -1,0 +1,10 @@
+event file
+
+rule test_rule : file {
+    file.name == "Rubeus.exe"
+}
+
+sequence test_sequence : 5m [
+    test_rule,
+    :file {file.name == "Rubeus.exe"}
+]

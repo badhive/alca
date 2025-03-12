@@ -1,0 +1,27 @@
+event file
+
+private rule basic : file {
+    file.size >= 255 and file.name matches /MaL\.eXE/i and
+    file.sections[0].name iequals ".TEXT" and
+    for 1 i in (0..file.num_sections) : (
+        file.sections[i].size >= 0x20
+    )
+}
+
+rule basic2 : file {
+    file.num_sections < 4 and file.sections[1].name startswith ".bss" and
+    #file.sections[0].name == 5 and
+    file.path startswith "\\Windows\\" and
+    for all i in (0..file.num_sections) : (
+        file.sections[i].name startswith ".bs" or
+        file.sections[i].name iendswith "TEXT" or
+        file.sections[i].name contains "data" and
+        basic
+    )
+}
+
+sequence basic_sequence [
+    basic,
+    basic2,
+    :file { file.path icontains "\\temp" }
+]

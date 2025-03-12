@@ -1,0 +1,7 @@
+event file
+
+// sequence is used to detect ransomware, but is invalid
+sequence contains_invalid_rule : 5s [
+    :file { file.action == file.FILE_MODIFY and (file.extension != "exe" and file.extension != "dll") },
+    :file { file.action == file.FILE_RENAME and file.extension > "js" },
+]

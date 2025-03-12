@@ -1,0 +1,9 @@
+event file
+event process
+
+rule detect_dropper : file {
+    file.action == file.FILE_CREATE and
+    file.extension == "exe" and
+    not file.path == "C:\\Windows\\temp" and
+    process.name == "dropper.exe"
+}

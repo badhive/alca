@@ -1,0 +1,15 @@
+event file
+
+rule in_scope : file {
+    file.name == "kernel32.dll"
+}
+
+sequence my_sequence : 5s [
+    in_scope,
+    :file { file.extension == "dll" },
+    out_scope,
+]
+
+rule out_scope : file {
+    file.size > 10000
+}
