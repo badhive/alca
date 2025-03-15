@@ -49,7 +49,7 @@ the extension has changed). If both these conditions are true, then the rule is 
 notification similar to the one below:
 
 ```
-[2025-01-01 00:00:00] [rule] name = "detect_foo_ransomware"
+[2025-01-01 00:00:00] [rule] [malware.exe] name = "detect_foo_ransomware"
 ```
 
 #### Sequences
@@ -80,7 +80,7 @@ This sequence:
 sequentially and within 5 seconds of each other, then we should see exactly **one** notification.
 
 ```
-[2025-01-01 00:00:00] [sequ] name = "detect_foo_ransomware"
+[2025-01-01 00:00:00] [sequ] [malware.exe] name = "detect_foo_ransomware"
 ```
 
 Notice that `detect_foo_rename` is marked as `private`. This is to avoid getting two trigger notifications - one for
