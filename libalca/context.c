@@ -1,31 +1,18 @@
 /*
-Copyright (c) 2025, pygrum. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its contributors
-may be used to endorse or promote products derived from this software without
-specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2025 pygrum.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -36,11 +23,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <alca/context.h>
 
-typedef struct ac_module_loader
-{
-    const char *name;
-    ac_module_load_callback load_callback;
-} module_loader;
+#undef MODULE
 
 struct ac_context
 {
@@ -70,6 +53,38 @@ struct ac_context_object
     void *extended_data;
 };
 
+typedef struct ac_module_loader
+{
+    const char *name;
+    ac_module_load_callback load_callback;
+    ac_module_unload_callback unload_callback;
+} ac_module_loader;
+
+// basically stole the idea from yara hehehe
+
+// declare module load / unload functions
+
+#define MODULE(n) \
+ac_module *n##_load_callback(); \
+ac_module *n##_unload_callback(); \
+
+#include <alca/module.list>
+
+#undef MODULE
+
+// add module load / unload callbacks to loader list
+
+#define MODULE(n) { \
+.name = #n, \
+.load_callback = n##_load_callback, \
+.unload_callback = n##_unload_callback \
+}, \
+
+ac_module_loader module_loaders[] = {
+#include <alca/module.list>
+    { NULL, NULL, NULL }
+};
+
 int context_object_cmp(const void *a, const void *b, void *c)
 {
     const ac_context_object *obja = a;
@@ -85,14 +100,14 @@ uint64_t context_object_hash(const void *item, uint64_t seed0, uint64_t seed1)
 
 int module_cmp(const void *a, const void *b, void *c)
 {
-    const module_loader *obja = a;
-    const module_loader *objb = b;
+    const ac_module_loader *obja = a;
+    const ac_module_loader *objb = b;
     return strcmp(obja->name, objb->name);
 }
 
 uint64_t module_hash(const void *item, uint64_t seed0, uint64_t seed1)
 {
-    const module_loader *obj = item;
+    const ac_module_loader *obj = item;
     return hashmap_murmur(obj->name, strlen(obj->name), seed0, seed1);
 }
 
@@ -121,10 +136,17 @@ ac_context *ac_context_new()
     ac_context *ctx = ac_alloc(sizeof(ac_context));
     ctx->objects = hashmap_new(sizeof(ac_context_object), 0, 0, 0,
                                context_object_hash, context_object_cmp, ac_context_object_free_internals, NULL);
-    ctx->module_callbacks = hashmap_new(sizeof(module_loader), 0, 0, 0,
+    ctx->module_callbacks = hashmap_new(sizeof(ac_module_loader), 0, 0, 0,
                                         module_hash, module_cmp, NULL, NULL);
     ctx->environment = hashmap_new(sizeof(ac_context_env_item), 0, 0, 0,
                                env_item_hash, env_item_cmp, NULL, NULL);
+    int idx = 0;
+    while (1)
+    {
+        if (module_loaders[idx].name == NULL)
+            break;
+        ac_context_add_module_load_callback(ctx, module_loaders[idx].name, module_loaders[idx].load_callback);
+    }
     return ctx;
 }
 
@@ -285,7 +307,7 @@ void *ac_context_get_environment(ac_context *ctx)
 
 int ac_context_get_module(ac_context *ctx, const char *name, ac_module_load_callback *callback)
 {
-    module_loader *ldr = (module_loader *) hashmap_get(ctx->module_callbacks, &(module_loader){.name = name});
+    ac_module_loader *ldr = (ac_module_loader *) hashmap_get(ctx->module_callbacks, &(ac_module_loader){.name = name});
     if (!ldr)
         return FALSE;
     *callback = ldr->load_callback;
@@ -297,23 +319,28 @@ uint32_t ac_context_object_get_module_version(ac_context_object *object)
     return object->version;
 }
 
-void ac_context_add_module_load_callback(ac_context *ctx, const char *module_name, ac_module_load_callback callback)
+void ac_context_add_module_load_callback(
+    ac_context *ctx,
+    const char *module_name,
+    ac_module_load_callback callback)
 {
-    module_loader module = {.name = module_name, .load_callback = callback};
+    ac_module_loader module = {.name = module_name, .load_callback = callback};
     hashmap_set(ctx->module_callbacks, &module);
 }
 
-int ac_context_load_module(ac_context *ctx, const char *module_name)
+void ac_context_load_modules(ac_context *ctx)
 {
-    const module_loader *module = hashmap_get(ctx->module_callbacks, &(module_loader){.name = module_name});
-    if (!module)
-        return 0;
-    if (hashmap_get(ctx->objects, &(ac_context_object){.name = module_name}))
-        return 1; // already loaded
-    ac_context_object *object = module->load_callback(); // object was created with ac_context_create_module_object
-    hashmap_set(ctx->objects, object);
-    ac_free(object);
-    return 1;
+    void *item;
+    size_t i = 0;
+    while (hashmap_iter(ctx->module_callbacks, &i, &item))
+    {
+        const ac_module_loader *module = item;
+        if (hashmap_get(ctx->objects, &(ac_context_object){.name = module->name}))
+            return; // already loaded
+        ac_context_object *object = module->load_callback(); // object was created with ac_context_create_module_object
+        hashmap_set(ctx->objects, object);
+        ac_free(object);
+    }
 }
 
 void ac_context_object_set_unmarshaller(ac_context_object *object, ac_context_object_event_unmarshaller unmarshal)

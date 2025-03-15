@@ -1,31 +1,18 @@
 /*
-Copyright (c) 2025, pygrum. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its contributors
-may be used to endorse or promote products derived from this software without
-specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2025 pygrum.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <assert.h>
 #include <ctype.h>
@@ -43,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VM_ACCUM_MAX 4
 #define VM_MAX_CALLBACKS 10
 
-#ifdef ALCA_BUILD_DEBUG
+#if(ALCA_BUILD_DEBUG == 1)
 #define DBGPRINT(...) vm_debug_print(__VA_ARGS__)
 #else
 #define DBGPRINT(...)
@@ -183,6 +170,9 @@ ac_vm *ac_vm_new(ac_compiler *compiler)
     vm->code = ac_arena_data(compiler->code_arena);
     vm->data = compiler->data_arena;
 
+    // load all module objects into context
+    ac_context_load_modules(vm->cpl->ctx);
+
     // construct sequence table
     vm->sequence_table = ac_alloc(compiler->nsequences * sizeof(vm_sequence));
     for (int i = 0; i < compiler->nsequences; i++)
@@ -205,7 +195,6 @@ ac_vm *ac_vm_new(ac_compiler *compiler)
             hashmap_set(vm->sequence_table[i].monitored_rules, &(vm_monrule){entry->rule_indices[j], 0});
         }
     }
-
     // create mapping of module ordinals to event type names
     vm->modules = hashmap_new(
         sizeof(modinfo),
@@ -232,29 +221,19 @@ int ac_vm_add_trigger_callback(ac_vm *vm, ac_trigger_callback cb)
     return TRUE;
 }
 
-// trigger callback TODO move to alca CLI executable
-void vm_print_trigger(int type, char *name, const time_t at)
-{
-    char buffer[26] = {0};
-    struct tm *tm_info = localtime(&at);
-    const char *fmt = "[%s] [%s] name = \"%s\"\n";
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-    printf(fmt, buffer, type == AC_VM_RULE ? "rule" : "sequ", name);
-}
-
-void vm_report_triggered(ac_vm *vm, int type, char *name, time_t at)
+void vm_report_triggered(ac_vm *vm, int type, char *name, time_t at, void *exec_context)
 {
     for (int i = 0; i < vm->ncb; i++)
     {
         if (vm->cb[i])
-            vm->cb[i](type, name, at);
+            vm->cb[i](type, name, at, exec_context);
     }
     vm->ntriggers++;
 }
 
 // notifies sequences monitoring rule at `rule_idx` about the time the rule was triggered.
 // if the trigger times are ascending, then rules triggered sequentially so sequence is TRUE
-void vm_update_sequences(ac_vm *vm, uint32_t rule_index, time_t trigger_time)
+void vm_update_sequences(ac_vm *vm, uint32_t rule_index, time_t trigger_time, void *exec_context)
 {
     time_t at = time(NULL);
     vm_monrule rule = {rule_index, vm->current_rule, trigger_time};
@@ -288,7 +267,7 @@ void vm_update_sequences(ac_vm *vm, uint32_t rule_index, time_t trigger_time)
             if (!s->max_span || (s->max_span && last - first <= s->max_span))
             {
                 char *name = ac_arena_get_string(vm->data, vm->cpl->sequence_table[i].name_offset);
-                vm_report_triggered(vm, AC_VM_SEQUENCE, name, at);
+                vm_report_triggered(vm, AC_VM_SEQUENCE, name, at, exec_context);
             }
         }
     }
@@ -301,24 +280,22 @@ int ac_vm_get_trigger_count(ac_vm *vm)
 
 /*
 +----------+
-| version  | 4
+| version  | module version
 +----------+
-| etypelen | 4
+| etypelen | event type length
 +----------+
-| typename | ..
+| typename | event type
 +----------+
-| evntdata | ..
+| evntdata | event data
 +----------+
 */
 
 // executes all rules with matching event type or event type 0 (none)
-ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize)
+ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize, void *exec_context)
 {
     vm->ntriggers = 0; // reset trigger count
     char *event_type = NULL;
     ac_error err = ERROR_SUCCESS;
-    if (!vm->ncb)
-        vm->cb[vm->ncb++] = vm_print_trigger;
 
     // get event version, name and data
     if (esize < 8)
@@ -329,9 +306,6 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize)
         return ERROR_BAD_DATA;
     event_type = (char *) event + (2 * sizeof(uint32_t));
 
-    // unmarshal event data
-    if (!ac_context_load_module(vm->cpl->ctx, event_type))
-        return ERROR_MODULE;
     ac_context_object *mod = ac_context_get(vm->cpl->ctx, event_type);
     if (!mod)
         return ERROR_MODULE; // unknown module name
@@ -362,9 +336,9 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize)
                     time_t at = time(NULL);
                     // report rule has been triggered only if it is not anonymous or private
                     if (!(entry->flags & AC_SEQUENCE_RULE || entry->flags & AC_PRIVATE_RULE))
-                        vm_report_triggered(vm, AC_VM_RULE, vm->current_rule, at);
+                        vm_report_triggered(vm, AC_VM_RULE, vm->current_rule, at, exec_context);
                     // done for all rules to account for external (public and private) rules
-                    vm_update_sequences(vm, i, at);
+                    vm_update_sequences(vm, i, at, exec_context);
                 }
                 vm->current_rule = NULL;
             }
