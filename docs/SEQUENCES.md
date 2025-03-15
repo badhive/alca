@@ -32,9 +32,7 @@ This sequence:
 Notice that `detect_foo_rename` is marked as [private](RULES.md#private-rules). This is to avoid getting two trigger 
 notifications - one for the rule and one for the sequence.
 
-### Advantages
-
-As mentioned in the [rule](RULES.md) documentation, rules include this feature to call another rule and use the result
+As mentioned in the [rule](RULES.md) documentation, within rules you can call another rule and use the result
 as a boolean value in their own. The main caveat of this method is that only rules monitoring the same event type can
 be called.
 
@@ -47,7 +45,8 @@ The integer and time identifier that you see after the colon in a sequence is kn
 range that all the rules must trigger within for the sequence to match. This is particularly useful when you want
 to search for particular behaviours that would be suspicious within a short time range.
 
-The time identifier `s` denotes the number of seconds that the span range is. `m` denotes the number of minutes.
+The time identifier `s` denotes the number of seconds that the span range is. `m` denotes the number of minutes. For
+example, `5m` max span = 5 minute trigger window.
 
 Sequences do **not** store data or event records. They simply monitor the times at which their rules were triggered,
 and perform a check to see if the difference between the latest and earliest trigger times is less than the max span.

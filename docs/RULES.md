@@ -31,7 +31,7 @@ rule dummy_rule { 1 + 1 == 2 }
 
 #### Private rules
 
-Private rules are rules that you don't want to reported if triggered. They will, however, be run on event data
+Private rules are rules that you don't want a notification from if triggered. They will, however, be run on event data
 that is received just like any other rule (so long as the received event's type matches the event that the rule is 
 monitoring). This is so that [sequences](SEQUENCES.md) are able to utilise private rules.
 
@@ -59,15 +59,15 @@ In this case, `my_rule_b` will trigger if a file's name is "of_interest.txt" AND
 
 ### Types
 
-ALCA can be described as strongly typed. Event data field types in a module are explicitly declared,
+ALCA can be described as statically typed. Event data field types in a module are explicitly declared,
 and all types are checked for compatibility (with operators and each other) at compile time.
 
 The 3 core types are booleans (true / false), integers, and strings. However, modules can also declare arrays
-and structs, which ALCA has support for. 
+and structs containing these types, both of which ALCA has support for. 
 
 Constant integer declarations in rule files can be either decimal (e.g. 10) or hexadecimal (e.g. 0xA).
 
-ALCA rules contain a variety of operators that help with querying event data.
+ALCA rules contain a variety of operators that can be used when querying event data.
 
 ### Supported Operators
 
@@ -117,7 +117,7 @@ ALCA provides a wide range of string operators. The operators beginning with `i`
 
 #### Regular expressions
 
-ALCA makes use of [PRCE2's](https://github.com/PCRE2Project/pcre2) powerful perl-compatible regex engine. This
+ALCA makes use of [PCRE2's](https://github.com/PCRE2Project/pcre2) powerful perl-compatible regex engine. This
 provides rule writers with a rich set of modifiers and features. ALCA supports the following modifiers, with valid
 combinations of each also supported:
 
