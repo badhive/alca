@@ -7,9 +7,7 @@ refer to as a [sensor](#sensors)).
 
 ### Install
 
-Alca binaries for Windows and Linux (64-bit / 32-bit) are provided in the 
-[Releases](https://github.com/badhive/alca/releases/latest) page. To build the project yourself, you will need
-Git, a C compiler (gcc, MinGW, MSVC) and CMake installed. 
+To build the project yourself, you will need Git, a C compiler (gcc, MinGW, MSVC) and CMake installed. 
 
 ```sh
 # clone the repository
@@ -21,7 +19,7 @@ git submodule update --init
 
 # build
 cmake -B build . 
-cmake --build build/ --target alca alcac
+cmake --build build/ --target alca
 ```
 
 The executable will be located in the `./build` directory.
