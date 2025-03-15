@@ -46,10 +46,13 @@ void flogf(FILE *fd, const char *format, ...) {
 
 void signalHandler(int sig)
 {
+    flogf(stdout, "[info] shutting down...\n");
     if (connectSocket != INVALID_SOCKET)
     {
         conn_close(connectSocket);
     }
+    conn_api_shutdown();
+    exit(0);
 }
 
 int check_recv(SOCKET s, int rc)

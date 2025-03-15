@@ -102,6 +102,10 @@ the socket to be received and run by the sensor.
 
 ALCA's own flagship sensor is currently in active development.
 
+### Documentation
+
+View the full documentation [here](docs).
+
 ### Credits / References / Inspirations
 
 - https://github.com/PCRE2Project/pcre2 Regex library
