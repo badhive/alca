@@ -16,10 +16,13 @@ set(ALCA_SOURCES libalca/lexer.c
         libalca/arena.c
         libalca/bytecode.c
         libalca/vm.c
+        libalca/packet.c
 )
 
 set (ALCA_CLI_SOURCES cli/cli.c
-        cli/cli.h)
+        cli/cli.h
+        cli/conn.c
+        cli/conn.h)
 
 set(ALCA_INCLUDES "${CMAKE_SOURCE_DIR}/libalca/include"
         "${CMAKE_SOURCE_DIR}/libs/include"
@@ -49,7 +52,11 @@ target_link_libraries(alca-shared pcre2-8-static)
 
 ## alca cli
 add_executable(alca cli/alca.c ${ALCA_CLI_SOURCES})
-target_link_libraries(alca PRIVATE alca-static)
+if(WIN32)
+    target_link_libraries(alca PRIVATE alca-static wsock32 ws2_32)
+else()
+    target_link_libraries(alca PRIVATE alca-static)
+endif()
 
 # Tests
 include(CTest)

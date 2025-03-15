@@ -1,31 +1,18 @@
 /*
-Copyright (c) 2025, pygrum. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its contributors
-may be used to endorse or promote products derived from this software without
-specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2025 pygrum.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef AC_UTILS_H
 #define AC_UTILS_H
@@ -59,9 +46,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AC_VERSION( maj, min, pch ) \
 ((maj << 24) & 0xFF000000) | ((min << 16) & 0x00FF0000) | (pch & 0x0000FFFF)
 
+#define ALCA_VERSION AC_VERSION( 0, 0, 1 )
+#define ALCA_MAGIC 0x41434c4
+
 #define b2l(a) ac_u32be_to_u32le(a)
+#define l2b(a) ac_u32le_to_u32be(a)
 
 #include <stdint.h>
+#include <alca/errors.h>
 
 /** Joins any number path elements into a single path. The resulting path can be freed with ac_free.
  * Does not take into account / resolve relative elements.
@@ -80,6 +72,10 @@ void *ac_realloc(void *ptr, unsigned int size);
 char *ac_str_extend(char *str, char c);
 
 uint32_t ac_u32be_to_u32le(uint32_t x);
+
+uint32_t ac_u32le_to_u32be(uint32_t x);
+
+ac_error ac_read_file(const char *filename, char **buffer, uint32_t *size);
 
 char *__ac_path_join(int, ...);
 
