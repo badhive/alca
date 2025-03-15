@@ -472,8 +472,14 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
                 // rules return true
                 if (item->tok_type == 0 && item->type == STMT_RULE)
                 {
+                    ac_token *evt = checker->current_rule->u.rule.event;
                     // ext stores the event name for the rule
-                    if (!item->ext || strcmp(item->ext, checker->current_rule->u.rule.event->value) != 0)
+                    if (item->ext == NULL && evt != NULL || item->ext != NULL && evt == NULL)
+                    {
+                        report_error(checker, expr->u.literal.value, ERROR_BAD_CALL, TOKEN_EOF,
+                            "a referenced rule's event type must match the callee's");
+                    }
+                    if (item->ext && strcmp(item->ext, checker->current_rule->u.rule.event->value) != 0)
                         report_error(checker, expr->u.literal.value, ERROR_BAD_CALL, TOKEN_EOF,
                             "a referenced rule's event type must match the callee's");
                     return TOKEN_TRUE;
@@ -592,8 +598,9 @@ int checker_check_rule(ac_checker *checker, ac_statement *stmt, int is_seq_rule)
             .name = stmt->u.rule.name->value,
             .type = STMT_RULE,
             .src = (char*)checker->ast->path,
-            .ext = stmt->u.rule.event->value
         };
+        if (stmt->u.rule.event)
+            rule_name.ext = stmt->u.rule.event->value;
         hashmap_set(checker->env, &rule_name);
 
         if (stmt->u.rule.private)
