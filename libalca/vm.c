@@ -221,16 +221,6 @@ int ac_vm_add_trigger_callback(ac_vm *vm, ac_trigger_callback cb)
     return TRUE;
 }
 
-// trigger callback TODO move to alca CLI executable
-void vm_print_trigger(int type, char *name, const time_t at, void *ectx)
-{
-    char buffer[26] = {0};
-    struct tm *tm_info = localtime(&at);
-    const char *fmt = "[%s] [%s] name = \"%s\"\n";
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-    printf(fmt, buffer, type == AC_VM_RULE ? "rule" : "sequ", name);
-}
-
 void vm_report_triggered(ac_vm *vm, int type, char *name, time_t at, void *exec_context)
 {
     for (int i = 0; i < vm->ncb; i++)
@@ -290,13 +280,13 @@ int ac_vm_get_trigger_count(ac_vm *vm)
 
 /*
 +----------+
-| version  | 4
+| version  | module version
 +----------+
-| etypelen | 4
+| etypelen | event type length
 +----------+
-| typename | ..
+| typename | event type
 +----------+
-| evntdata | ..
+| evntdata | event data
 +----------+
 */
 
@@ -306,8 +296,6 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize, void *exec_
     vm->ntriggers = 0; // reset trigger count
     char *event_type = NULL;
     ac_error err = ERROR_SUCCESS;
-    if (!vm->ncb)
-        vm->cb[vm->ncb++] = vm_print_trigger;
 
     // get event version, name and data
     if (esize < 8)

@@ -29,8 +29,9 @@
 #define AC_PACKET_DATA_SUBMIT_ERROR 0x12
 #define AC_PACKET_DATA_TRACE_START 0x13 // sent by sensor to alca
 #define AC_PACKET_DATA_EVENT 0x14 // for every event
-#define AC_PACKET_DATA_TRACE_END 0x15
-
+#define AC_PACKET_DATA_TRACE_STOP 0x15 // sent by alca to stop event tracing
+#define AC_PACKET_DATA_TRACE_END 0x16
+#define AC_PACKET_MAX_RECV_SIZE 1024
 #define AC_PACKET_SEQUENCE_LAST 0xffffffff
 
 PACK(typedef struct ac_packet_header

@@ -41,7 +41,7 @@ SOCKET conn_connect(const char *address, uint16_t port)
 {
     int rc;
     SOCKET conn;
-    struct addrinfo *result = NULL, hints;
+    struct addrinfo *result = NULL, hints = {0};
     char portno[6] = {0};
     itoa(port, portno, 10);
     rc = getaddrinfo(address, portno, &hints, &result);

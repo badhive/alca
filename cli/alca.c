@@ -14,6 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -24,14 +25,15 @@
 #define LOCAL_MODE 1
 #define REMOTE_MODE 2
 
+SOCKET connectSocket = INVALID_SOCKET;
+
 void flogf(FILE *fd, const char *format, ...) {
     time_t rawtime;
-    struct tm *timeinfo;
     char time_str[80];
 
     time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", timeinfo);
+    struct tm *ti = localtime(&rawtime);
+    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", ti);
     fprintf(fd, "[%s] ", time_str);
 
     va_list args;
@@ -42,13 +44,21 @@ void flogf(FILE *fd, const char *format, ...) {
     fprintf(fd, "\n");
 }
 
+void signalHandler(int sig)
+{
+    if (connectSocket != INVALID_SOCKET)
+    {
+        conn_close(connectSocket);
+    }
+}
+
 int check_recv(SOCKET s, int rc)
 {
     if (rc == 0)
     {
         flogf(stderr, "[error] connection to remote sensor has been closed");
         conn_close(s);
-        return -1;
+        return -2;
     }
     if (rc < 0)
     {
@@ -59,12 +69,75 @@ int check_recv(SOCKET s, int rc)
     return 0;
 }
 
-int await(SOCKET s, const char *binPath)
+void vm_print_trigger(int type, char *name, const time_t at, void *ectx)
 {
-    // TODO
+    char buffer[26] = {0};
+    struct tm *tm_info = localtime(&at);
+    const char *fmt = "[%s] [%s] [%s] name = \"%s\"\n";
+    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    printf(fmt, buffer, type == AC_VM_RULE ? "rule" : "sequ", (char *)ectx, name);
 }
 
-SOCKET submit_local(short port, const uint8_t *data, uint32_t size)
+void await(SOCKET s, const char *binPath, ac_vm *vm)
+{
+    int rc;
+    int seq = 0;
+    flogf(stdout, "[info] awaiting event data for %s, [ctrl+c] to exit...", binPath);
+    while (1)
+    {
+        ac_packet_handle handle;
+        // await data from socket
+        uint32_t packet_size;
+        rc = recv(s, (char *)&packet_size, sizeof(packet_size), 0);
+        if (check_recv(s, rc) < 0)
+        {
+            if (rc == -2)
+                return;
+            continue;
+        }
+        packet_size = l2b(packet_size);
+        if (!packet_size)
+            continue;
+        if (packet_size > AC_PACKET_MAX_RECV_SIZE)
+        {
+            flogf(stderr, "[error] malformed packet received (exceeds maximum packet size)");
+            continue;
+        }
+        uint8_t *packet = ac_alloc(packet_size);
+        rc = recv(s, (char *)packet, (int)packet_size, 0);
+        if ((rc = check_recv(s, rc)) < 0)
+        {
+            ac_free(packet);
+            if (rc == -2)
+                return;
+            continue;
+        }
+        if (!ac_packet_read(packet, packet_size, &handle))
+        {
+            flogf(stderr, "[error] malformed packet received");
+            ac_free(packet);
+            continue;
+        }
+        ac_packet_header hdr;
+        ac_packet_get_header(handle, &hdr);
+        if (hdr.magic != ALCA_MAGIC)
+        {
+            flogf(stderr, "[error-%d] invalid magic number", seq);
+            ac_free(packet);
+            continue;
+        }
+        if (hdr.version != ALCA_VERSION)
+            flogf(stdout, "[warning-%d] version mismatch between alca and sensor", seq);
+        uint8_t *data = ac_alloc(hdr.data_len);
+        ac_packet_get_data(handle, data);
+        ac_vm_exec(vm, data, hdr.data_len, (void *)binPath);
+        ac_packet_destroy(handle);
+        ac_free(packet);
+        seq++;
+    }
+}
+
+SOCKET submit_local(uint16_t port, const uint8_t *data, uint32_t size)
 {
     ac_packet_handle hpacket;
     int rc = 0;
@@ -79,7 +152,7 @@ SOCKET submit_local(short port, const uint8_t *data, uint32_t size)
         goto end;
     }
     send(s, (const char *)&packet_size, sizeof(packet_size), 0);
-    rc = send(s, (const char *)pkdata, packet_size, 0);
+    rc = send(s, (const char *)pkdata, (int)packet_size, 0);
     if (rc == SOCKET_ERROR)
     {
         flogf(stderr, "[error] failed to submit binary to sensor");
@@ -112,12 +185,13 @@ SOCKET submit_remote(const char *host, const char *binpath)
         flogf(stderr, "[error] invalid remote port number");
         return INVALID_SOCKET;
     }
-    char *hostname = ac_alloc(host - pport + 1);
-    memcpy(hostname, host, host - pport + 1);
+    char *hostname = ac_alloc(pport - host + 1);
+    memcpy(hostname, host, pport - host + 1);
+    hostname[pport - host] = '\0';
     SOCKET s = conn_connect(hostname, port);
     if (s == INVALID_SOCKET)
     {
-        flogf(stderr, "[error] failed to connect to local port %d", port);
+        flogf(stderr, "[error] failed to connect to remote host %s:%d", hostname, port);
         ac_free(hostname);
         return s;
     }
@@ -151,7 +225,7 @@ SOCKET submit_remote(const char *host, const char *binpath)
         uint32_t packet_size;
         const uint8_t *pkdata = ac_packet_serialize(hpacket, &packet_size);
         send(s, (const char *)&packet_size, sizeof(packet_size), 0);
-        rc = send(s, (const char *)pkdata, packet_size, 0);
+        rc = send(s, (const char *)pkdata, (int)packet_size, 0);
         ac_packet_free_serialized((void *)pkdata);
         ac_packet_destroy(hpacket);
         ac_free(buf);
@@ -185,7 +259,7 @@ ac_error compile_rules(const char *path, ac_compiler **out)
     return err;
 }
 
-int run(const char *binpath, const char *rulePath, int mode, short localPort, const char *remoteAddr)
+int run(const char *binpath, const char *rulePath, int mode, uint16_t localPort, const char *remoteAddr)
 {
     SOCKET s;
     int rc;
@@ -193,10 +267,11 @@ int run(const char *binpath, const char *rulePath, int mode, short localPort, co
     uint32_t packet_size = 0;
     ac_packet_header hdr;
     ac_compiler *compiler;
+    ac_vm *vm;
     // compile the rules
     if (compile_rules(rulePath, &compiler) != ERROR_SUCCESS)
         return -1;
-
+    vm = ac_vm_new(compiler);
     if (mode == LOCAL_MODE)
         s = submit_local(localPort, (const uint8_t*)binpath, strlen(binpath));
     else
@@ -209,8 +284,15 @@ int run(const char *binpath, const char *rulePath, int mode, short localPort, co
         conn_close(s);
         return -1;
     }
+    packet_size = l2b(packet_size);
+    if (packet_size > AC_PACKET_MAX_RECV_SIZE)
+    {
+        flogf(stderr, "[error] malformed packet received (exceeds maximum packet size)");
+        conn_close(s);
+        return -1;
+    }
     uint8_t *pkdata = ac_alloc(packet_size);
-    rc = recv(s, (char *)pkdata, packet_size, 0);
+    rc = recv(s, (char *)pkdata, (int)packet_size, 0);
     if (check_recv(s, rc) < 0)
     {
         conn_close(s);
@@ -253,9 +335,10 @@ int run(const char *binpath, const char *rulePath, int mode, short localPort, co
     char lportsz[6] = {0};
     itoa(localPort, lportsz, 10);
     flogf(stdout, "[info] connected to sensor: %s @ %s", data, mode == LOCAL_MODE ? lportsz : remoteAddr);
-    rc = await(s, binpath);
-    conn_close(s);
     ac_free(pkdata);
+    signal(SIGINT, signalHandler);
+    await(s, binpath, vm);
+    conn_close(s);
     return rc;
 }
 
@@ -333,7 +416,7 @@ int main(int argc, char *argv[])
         mode = REMOTE_MODE;
 
     conn_api_init();
-    run(binary, ruleFile, mode, localPort, remoteHost);
+    run(binary, ruleFile, mode, (uint16_t)localPort, remoteHost);
     conn_api_shutdown();
     cli_destroy(cli);
     return 0;

@@ -54,7 +54,7 @@ uint8_t *ac_packet_serialize(ac_packet_handle handle, uint32_t *total_size)
     uint8_t *pkdata =ac_alloc(sizeof(ac_packet_header) + packet->header.data_len);
     memcpy(pkdata, &packet->header, sizeof(ac_packet_header));
     memcpy(pkdata + sizeof(ac_packet_header), packet->data, packet->header.data_len);
-    *total_size = sizeof(ac_packet_header) + packet->header.data_len;
+    *total_size = b2l(sizeof(ac_packet_header) + packet->header.data_len);
     return pkdata;
 }
 
@@ -83,12 +83,13 @@ int ac_packet_read(const uint8_t *data, uint32_t data_len, ac_packet_handle *pha
     packet->header.packet_type = l2b(*ptr++);
     packet->header.data_type = l2b(*ptr++);
     packet->header.data_len = l2b(*ptr++);
+    if (packet->header.data_len > AC_PACKET_MAX_RECV_SIZE)
+        return -1;
     packet->data = ac_alloc(packet->header.data_len);
     memcpy(packet->data, ptr, packet->header.data_len);
     *phandle = handle;
     return 0;
 }
-
 
 void ac_packet_get_header(ac_packet_handle handle, ac_packet_header *header)
 {
