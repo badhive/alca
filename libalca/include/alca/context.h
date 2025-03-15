@@ -48,6 +48,7 @@ struct ac_context_env_item
     ac_stmt_type type;
     ac_token_type tok_type;
     char *src;
+    void *ext;
 };
 
 typedef ac_context_object *(*ac_module_load_callback)();

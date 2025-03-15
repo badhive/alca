@@ -28,7 +28,7 @@ struct ac_checker
 {
     ac_context *ctx;
     ac_context *rule_ctx;
-    char *current_rule;
+    ac_statement *current_rule;
     int nerrors;
     char **error_msgs;
     int *error_lines;
@@ -254,7 +254,7 @@ ac_token_type resolve_identifier_type(ac_checker *checker, ac_expr *expr)
             if (item->type == STMT_RULE)
             {
                 // catch recursive rule calls
-                if (checker->current_rule && strcmp(item->name, checker->current_rule) == 0)
+                if (checker->current_rule && strcmp(item->name, checker->current_rule->u.rule.name->value) == 0)
                     report_error(checker, expr_parent->u.literal.value, ERROR_RECURSION,
                              TOKEN_EOF,
                              "rule cannot reference itself");
@@ -471,7 +471,13 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
             {
                 // rules return true
                 if (item->tok_type == 0 && item->type == STMT_RULE)
+                {
+                    // ext stores the event name for the rule
+                    if (!item->ext || strcmp(item->ext, checker->current_rule->u.rule.event->value) != 0)
+                        report_error(checker, expr->u.literal.value, ERROR_BAD_CALL, TOKEN_EOF,
+                            "a referenced rule's event type must match the callee's");
                     return TOKEN_TRUE;
+                }
                 if (item->tok_type == TOKEN_NUMBER ||
                     item->tok_type == TOKEN_STRING ||
                     item->tok_type == TOKEN_TRUE ||
@@ -570,7 +576,7 @@ int checker_check_rule(ac_checker *checker, ac_statement *stmt, int is_seq_rule)
 {
     int ret = TRUE;
     int line = stmt->u.rule.name->line;
-    checker->current_rule = stmt->u.rule.name->value;
+    checker->current_rule = stmt;
     if (!is_seq_rule)
     {
         // check if rule is already defined
@@ -582,7 +588,12 @@ int checker_check_rule(ac_checker *checker, ac_statement *stmt, int is_seq_rule)
             goto end;
         }
         // add rule name to environment
-        ac_context_env_item rule_name = {.name = stmt->u.rule.name->value, .type = STMT_RULE, .src = (char*)checker->ast->path};
+        ac_context_env_item rule_name = {
+            .name = stmt->u.rule.name->value,
+            .type = STMT_RULE,
+            .src = (char*)checker->ast->path,
+            .ext = stmt->u.rule.event->value
+        };
         hashmap_set(checker->env, &rule_name);
 
         if (stmt->u.rule.private)

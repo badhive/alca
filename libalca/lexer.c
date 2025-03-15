@@ -152,7 +152,7 @@ int isValidIdentifier(char c)
 void lex_handleRegex(ac_lexer *lexer, char *regex)
 {
     int pcre_flags = 0;
-    char supported_modifiers[] = {'i', 0, 's', 0, 'x', 0, 'm', 0, 'n', 0};
+    char supported_modifiers[] = {'i', 0, 's', 0, 'm', 0, 'n', 0};
     while (!lex_isEof(lexer))
     {
         int found = FALSE;
@@ -171,7 +171,6 @@ void lex_handleRegex(ac_lexer *lexer, char *regex)
                         case 's': pcre_flags |= PCRE2_DOTALL; break;
                         case 'm': pcre_flags |= PCRE2_MULTILINE; break;
                         case 'n': pcre_flags |= PCRE2_NO_AUTO_CAPTURE; break;
-                        case 'x': pcre_flags |= PCRE2_EXTENDED; break;
                         default: ;
                     }
                     supported_modifiers[i+1] = 1;
