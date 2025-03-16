@@ -130,3 +130,35 @@ You can learn more about them [here](https://www.pcre.org/current/doc/html/pcre2
 
 To define a regex in a rule, enclose the expression in forward-slashes `/`, and include the modifier(s) on the end
 of the final `/`. Make sure to test these out at [Regex101](https://regex101.com/)!
+
+### Iterators
+
+ALCA has support for iterator expressions. These iterate through an array, doing a boolean check on each item.
+If a specified number of conditions are met, then the expression evaluates to true. They behave like and resemble [YARA's 
+iterators](https://yara.readthedocs.io/en/stable/writingrules.html#iterators) prior to v4.0.
+
+For example, the following expression checks that for **all** sections of a file, the section name either begins with 
+".vmp" + a decimal digit, or has the name ".text".
+
+```
+rule check_vmprotect : file {
+   file.num_sections >= and
+   for 3 i in (0..file.num_sections) : (
+      file.sections[i].name matches /\.vmp[0-9]/ or
+      file.sections[i].name == ".text"
+   )
+}
+```
+
+The iterator syntax is as follows:
+
+```
+for <quantifier> <variable> in (<range_start> .. <range_end>) : ( <boolean_expression> )
+```
+
+Valid quantifiers are any 32-bit integer, `any` and `all` keywords. When an integer N is specified, the iterator checks
+that at least N conditions are satisfied. `any` checks for at least one condition being fulfilled, and `all` checks for
+every condition in the range. They are effectively equivalent to:
+
+- `any`: `for 1 i in (start..end)`
+- `all`: `for end i in (start..end)`

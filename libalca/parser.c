@@ -35,8 +35,8 @@ program        → (sequenceStmt | ruleStmt)* EOF;
 Statements
 ==========
 sequenceStmt   → SEQUENCE IDENTIFIER "(" NUMBER ")" "[" whereStmt | IDENTIFIER ( "," whereStmt | IDENTIFIER )* "]" ;
-ruleStmt       → RULE IDENTIFIER whereStmt ;
-whereStmt      → "{" ( "|" IDENTIFIER ( "," IDENTIFIER )* "|" "where" )? expression "}" ;
+ruleStmt       → ( PRIVATE )? RULE IDENTIFIER "{" expression "}" ;
+importStmt      → "event" IDENTIFIER ;
 
 Expressions
 ===========
