@@ -142,7 +142,7 @@ For example, the following expression checks that for **all** sections of a file
 
 ```
 rule check_vmprotect : file {
-   file.num_sections >= and
+   file.num_sections >= 3 and
    for 3 i in (0..file.num_sections) : (
       file.sections[i].name matches /\.vmp[0-9]/ or
       file.sections[i].name == ".text"
