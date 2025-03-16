@@ -876,13 +876,15 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 ac_module_function fn = ac_context_object_get_function(r1.o);
                 DBGPRINT("CALL: %p (argc = %d)", fn, r1.i);
                 assert(fn != NULL);
-                err = fn(args, &r1);
+                ac_object tmp = {0};
+                err = fn(r1.o, args, &tmp);
                 ac_free(args);
                 if (err != ERROR_SUCCESS)
                 {
                     stop = TRUE;
                     break;
                 }
+                r1 = tmp;
                 push(r1)
             }
             break;

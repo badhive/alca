@@ -51,17 +51,19 @@ struct ac_context_env_item
     void *ext;
 };
 
-typedef ac_context_object *(*ac_module_load_callback)();
 
-typedef void (*ac_module_unload_callback)(ac_context_object *);
-
-typedef int (*ac_context_object_event_unmarshaller)(ac_context_object *module, const unsigned char *edata);
-
-typedef ac_error (*ac_module_function)(ac_object *args, ac_object *result);
 
 typedef void (*ac_context_object_freer)(ac_context_object *object);
 
 typedef ac_context_object ac_module;
+
+typedef ac_module *(*ac_module_load_callback)();
+
+typedef void (*ac_module_unload_callback)(ac_module *);
+
+typedef int (*ac_context_object_event_unmarshaller)(ac_module *module, const unsigned char *edata);
+
+typedef ac_error (*ac_module_function)(ac_module *fn_object, ac_object *args, ac_object *result);
 
 ac_context *ac_context_new();
 

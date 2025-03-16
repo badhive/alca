@@ -10,11 +10,5 @@ and modules in a provider-consumer model: there can be multiple consumers, but o
 You may wish to use one sensor that provides a range of event types, or multiple sensors that each specialise in a 
 particular event type - for example, by providing more granular / technical details regarding an event.
 
-### Modules
-
-A module is an object used by ALCA to unmarshal / deserialize event data received from a sensor. One module is
-responsible for precisely one event type. However, a sensor can provide events of multiple types, as long as there
-is a module corresponding to each event type.
-
 More information about writing sensors and modules will be available at a later stage, as ALCA's flagship sensor is
 currently in active development.
