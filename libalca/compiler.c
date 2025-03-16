@@ -550,11 +550,6 @@ ac_error compiler_compile_statements(ac_compiler *compiler)
     return ERROR_SUCCESS;
 }
 
-void ac_compiler_silence_warnings(ac_compiler *compiler)
-{
-
-}
-
 ac_error ac_compiler_compile(ac_compiler *compiler, const char *out)
 {
     if (compiler->done)
