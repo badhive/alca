@@ -18,11 +18,10 @@
 #define AC_CONN_H
 
 #ifdef _WIN32
-#ifndef _WIN32_WINNT
+#ifndef _WIN32_WINNT // NOLINT(*-reserved-identifier)
 #define _WIN32_WINNT 0x0501  /* Windows XP. */
 #endif
 #include <winsock2.h>
-#include <Ws2tcpip.h>
 #else
 typedef int SOCKET;
 #define INVALID_SOCKET -1
@@ -32,7 +31,7 @@ typedef int SOCKET;
 #include <unistd.h> // close()
 #include <netdb.h>  // getaddrinfo(), freeaddrinfo()
 #endif
-#include <stdint.h>
+#include <cstdint>
 
 int conn_api_init();
 

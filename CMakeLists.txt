@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
-project(alca C)
+project(alca C CXX)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(ALCA_SOURCES libalca/lexer.c
@@ -19,11 +20,6 @@ set(ALCA_SOURCES libalca/lexer.c
         libalca/packet.c
 )
 
-set (ALCA_CLI_SOURCES cli/cli.c
-        cli/cli.h
-        cli/conn.c
-        cli/conn.h)
-
 set(ALCA_INCLUDES "${CMAKE_SOURCE_DIR}/libalca/include"
         "${CMAKE_SOURCE_DIR}/libs/include"
 )
@@ -33,6 +29,9 @@ set(ALCA_INCLUDES "${CMAKE_SOURCE_DIR}/libalca/include"
 ## pcre2
 add_subdirectory("${CMAKE_SOURCE_DIR}/libs/pcre2")
 add_compile_definitions(PCRE2_CODE_UNIT_WIDTH=8)
+
+## CLI11
+set(LIB_CLI11_INCLUDES "${CMAKE_SOURCE_DIR}/libs/CLI11/include")
 
 # Libraries
 
@@ -51,9 +50,12 @@ target_compile_definitions(alca-shared PRIVATE ALCA_BUILD_DLL
 target_link_libraries(alca-shared pcre2-8-static)
 
 ## alca cli
-add_executable(alca cli/alca.c ${ALCA_CLI_SOURCES})
+add_executable(alca cli/alca.cpp
+        cli/conn.cpp
+        cli/conn.hpp)
+target_include_directories(alca PRIVATE ${LIB_CLI11_INCLUDES})
 if(WIN32)
-    target_link_libraries(alca PRIVATE alca-static wsock32 ws2_32)
+    target_link_libraries(alca PRIVATE alca-static wsock32 ws2_32 "-static")
 else()
     target_link_libraries(alca PRIVATE alca-static)
 endif()

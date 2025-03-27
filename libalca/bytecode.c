@@ -36,7 +36,7 @@ ac_error bytecode_emit_unary(ac_builder *builder, ac_expr *expr)
     ac_error err = bytecode_emit_expr(builder, expr->u.unary.right);
     if (err != ERROR_SUCCESS)
         return err;
-    switch (expr->u.unary.operator->type)
+    switch (expr->u.unary.op->type)
     {
         case TOKEN_BANG:
         case TOKEN_NOT: ac_arena_add_code(builder->code, OP_NOTL); break;
@@ -57,7 +57,7 @@ ac_error bytecode_emit_binary(ac_builder *builder, ac_expr *expr)
     err = bytecode_emit_expr(builder, expr->u.binary.left);
     if (err != ERROR_SUCCESS)
         return err;
-    ac_token_type op_type = expr->u.binary.operator->type;
+    ac_token_type op_type = expr->u.binary.op->type;
 
     // check that LHS is TRUE.
     // JMP to RHS code if it is. push FALSE for RHS result if it isn't, then jump over RHS
@@ -82,7 +82,7 @@ ac_error bytecode_emit_binary(ac_builder *builder, ac_expr *expr)
         *(uint32_t *)(inst + 1) = jmpaddr;
         ac_arena_replace_bytes(builder->code, offset, inst, 5); // patch jump to after RHS code is compiled
     }
-    switch (expr->u.binary.operator->type)
+    switch (expr->u.binary.op->type)
     {
         case TOKEN_AND: ac_arena_add_code(builder->code, OP_ANDL); break;
         case TOKEN_OR: ac_arena_add_code(builder->code, OP_ORL); break;

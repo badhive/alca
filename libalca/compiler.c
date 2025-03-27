@@ -388,7 +388,7 @@ ac_error compiler_compile_rule(ac_compiler *compiler, ac_statement *rule, int se
         lname = strlen(rule->u.rule.name->value);
         offset = ac_arena_add_string(compiler->data_arena, rule->u.rule.name->value, lname);
     }
-    if (rule->u.rule.private)
+    if (rule->u.rule.is_private)
         flags |= AC_PRIVATE_RULE;
     if (seq_rule)
         flags |= AC_SEQUENCE_RULE;

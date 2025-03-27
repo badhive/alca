@@ -504,11 +504,11 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
                 // true-false and string-regex are valid
                 if (!(t1 == TOKEN_TRUE && t2 == TOKEN_FALSE || t2 == TOKEN_TRUE && t1 == TOKEN_FALSE) &&
                     !(t1 == TOKEN_STRING && t2 == TOKEN_REGEX))
-                report_error(checker, expr->u.binary.operator, ERROR_BAD_OPERATION, TOKEN_EOF,
+                report_error(checker, expr->u.binary.op, ERROR_BAD_OPERATION, TOKEN_EOF,
                          "invalid operation (type mismatch)");
             }
-            if (!valid_operation(t1, t2, expr->u.binary.operator->type, &res))
-                report_error(checker, expr->u.binary.operator, ERROR_BAD_OPERATION, TOKEN_EOF, "incompatible operator");
+            if (!valid_operation(t1, t2, expr->u.binary.op->type, &res))
+                report_error(checker, expr->u.binary.op, ERROR_BAD_OPERATION, TOKEN_EOF, "incompatible operator");
             expr->u.binary.operand_type = t1;
             return res;
         }
@@ -517,10 +517,10 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
             ac_token_type t1 = resolve_type(checker, expr->u.unary.right);
             if (t1 == TOKEN_EOF)
                 return TOKEN_EOF;
-            ac_token_type op = expr->u.unary.operator->type;
+            ac_token_type op = expr->u.unary.op->type;
             ac_token_type res = TOKEN_EOF;
             if (!valid_operation(t1, TOKEN_EOF, op, &res))
-                report_error(checker, expr->u.unary.operator, ERROR_BAD_OPERATION, TOKEN_EOF,
+                report_error(checker, expr->u.unary.op, ERROR_BAD_OPERATION, TOKEN_EOF,
                          "incompatible unary operator");
             return res;
         }
@@ -603,7 +603,7 @@ int checker_check_rule(ac_checker *checker, ac_statement *stmt, int is_seq_rule)
             rule_name.ext = stmt->u.rule.event->value;
         hashmap_set(checker->env, &rule_name);
 
-        if (stmt->u.rule.private)
+        if (stmt->u.rule.is_private)
             // will be removed from scope once file is done checking, so other rule files cannot use it
             checker_add_private_rule(checker, rule_name.name);
     }

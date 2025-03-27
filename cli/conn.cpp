@@ -14,9 +14,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "conn.h"
+#include <string>
+#include <Ws2tcpip.h>
 
-#include <stdint.h>
+#include "conn.hpp"
 
 int conn_api_init()
 {
@@ -39,20 +40,16 @@ int conn_api_shutdown()
 
 SOCKET conn_connect(const char *address, uint16_t port)
 {
-    int rc;
-    SOCKET conn;
-    struct addrinfo *result = NULL, hints = {0};
-    char portno[6] = {0};
-    itoa(port, portno, 10);
-    rc = getaddrinfo(address, portno, &hints, &result);
+    addrinfo *result = nullptr, hints = {};
+    int rc = getaddrinfo(address, std::to_string(port).c_str(), &hints, &result);
     if (rc != 0)
         return INVALID_SOCKET;
-    conn = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    SOCKET conn = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
     if (conn == INVALID_SOCKET)
     {
         goto end;
     }
-    rc = connect(conn, result->ai_addr, (int)result->ai_addrlen);
+    rc = connect(conn, result->ai_addr, static_cast<int>(result->ai_addrlen));
     if (rc == SOCKET_ERROR)
     {
         closesocket(conn);

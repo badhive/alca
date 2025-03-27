@@ -31,6 +31,7 @@
 
 // type declarations for public implementations
 
+#ifndef __cplusplus
 typedef enum ac_token_type ac_token_type;
 typedef enum ac_expr_type ac_expr_type;
 typedef enum ac_stmt_type ac_stmt_type;
@@ -40,6 +41,7 @@ typedef struct ac_parser ac_parser;
 typedef struct ac_expr ac_expr;
 typedef struct ac_statement ac_statement;
 typedef struct ac_ast ac_ast;
+#endif
 
 typedef int ac_error;
 typedef int ac_field_type;
@@ -105,6 +107,14 @@ enum ac_stmt_type
 #define AC_RANGE_MATCH_ALL 2
 #define AC_RANGE_MATCH_FIXED 3
 
+struct ac_token
+{
+    ac_token_type type;
+    void *value;
+    int line;
+    int flags;
+};
+
 struct ac_lexer
 {
     // source file
@@ -151,14 +161,6 @@ struct ac_parser
     } error;
 };
 
-struct ac_token
-{
-    ac_token_type type;
-    void *value;
-    int line;
-    int flags;
-};
-
 struct ac_expr
 {
     ac_expr_type type;
@@ -169,7 +171,7 @@ struct ac_expr
         struct
         {
             ac_expr *left;
-            ac_token *operator;
+            ac_token *op;
             ac_expr *right;
             ac_token_type operand_type; // populated by type checker (bool, int, string, arr)
         } binary;
@@ -177,7 +179,7 @@ struct ac_expr
         // operations involving one expression (e.g. bitwise not, logical not)
         struct
         {
-            ac_token *operator;
+            ac_token *op;
             ac_expr *right;
         } unary;
 
@@ -237,7 +239,7 @@ struct ac_statement
         struct
         {
             int external;
-            int private;
+            int is_private;
             ac_token *name;
             ac_token *event;
             ac_expr *condition;

@@ -23,7 +23,7 @@ ac_expr *ac_expr_new_binary(ac_expr *left, ac_token *op, ac_expr *right)
     ac_expr *expr = ac_alloc(sizeof(ac_expr));
     expr->type = EXPR_BINARY;
     expr->u.binary.left = left;
-    expr->u.binary.operator = op;
+    expr->u.binary.op = op;
     expr->u.binary.right = right;
     return expr;
 }
@@ -32,7 +32,7 @@ ac_expr *ac_expr_new_unary(ac_token *op, ac_expr *right)
 {
     ac_expr *expr = ac_alloc(sizeof(ac_expr));
     expr->type = EXPR_UNARY;
-    expr->u.unary.operator = op;
+    expr->u.unary.op = op;
     expr->u.unary.right = right;
     return expr;
 }
@@ -120,7 +120,7 @@ ac_statement *ac_expr_new_rule(ac_token *name, ac_token *event, ac_expr *conditi
     rule->u.rule.event = event;
     rule->u.rule.condition = condition;
     rule->u.rule.external = external;
-    rule->u.rule.private = private;
+    rule->u.rule.is_private = private;
     return rule;
 }
 

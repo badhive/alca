@@ -1,3 +1,6 @@
 [submodule "libs/pcre2"]
 	path = libs/pcre2
 	url = git@github.com:PCRE2Project/pcre2
+[submodule "libs/CLI11"]
+	path = libs/CLI11
+	url = https://github.com/CLIUtils/CLI11

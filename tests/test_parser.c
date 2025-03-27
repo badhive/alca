@@ -43,12 +43,12 @@ void traverseExpression(ac_test *t, ac_expr *actual, ac_expr *expected)
         switch (expected->type)
         {
             case EXPR_BINARY:
-                ac_test_assert_int32_eq(t, actual->u.binary.operator->type, expected->u.binary.operator->type);
+                ac_test_assert_int32_eq(t, actual->u.binary.op->type, expected->u.binary.op->type);
                 traverseExpression(t, actual->u.binary.left, expected->u.binary.left);
                 traverseExpression(t, actual->u.binary.right, expected->u.binary.right);
                 break;
             case EXPR_UNARY:
-                ac_test_assert_int32_eq(t, actual->u.unary.operator->type, expected->u.unary.operator->type);
+                ac_test_assert_int32_eq(t, actual->u.unary.op->type, expected->u.unary.op->type);
                 traverseExpression(t, actual->u.unary.right, expected->u.unary.right);
                 break;
             case EXPR_LITERAL:
@@ -285,7 +285,7 @@ void test_psr_parse_simpleRule(ac_test *t)
     ac_expr *fn = literal(TOKEN_STRING, "Rubeus.exe");
 
     ac_token op = {.type = TOKEN_EQUAL_EQUAL};
-    ac_expr cond = {.type = EXPR_BINARY, .u.binary.left = fld, .u.binary.operator = &op, .u.binary.right = fn};
+    ac_expr cond = {.type = EXPR_BINARY, .u.binary.left = fld, .u.binary.op = &op, .u.binary.right = fn};
     rule.u.rule.condition = &cond;
 
     // initialise sequence
