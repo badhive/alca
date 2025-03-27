@@ -46,7 +46,7 @@ range that all the rules must trigger within for the sequence to match. This is 
 to search for particular behaviours that would be suspicious within a short time range.
 
 The time identifier `s` denotes the number of seconds that the span range is. `m` denotes the number of minutes. For
-example, `5m` max span = 5 minute trigger window.
+example, `5m` max span = 5-minute trigger window.
 
 Sequences do **not** store data or event records. They simply monitor the times at which their rules were triggered,
 and perform a check to see if the difference between the latest and earliest trigger times is less than the max span.

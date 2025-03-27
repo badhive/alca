@@ -20,6 +20,11 @@ Every module is named, and requires 3 functions with the following signatures:
    void <module_name>_event_unmarshaller(ac_module *module, const unsigned char *event_data);
     ```
 
+ALCA's in-built modules use [FlatBuffers](https://github.com/google/flatbuffers) to receive data from sensors.
+To ensure backwards-compatibility with existing rules, it is **strongly recommended** to only modify existing
+modules by adding new fields to the FlatBuffers schema. Implementing new event types using FlatBuffers is recommended
+but not required.
+
 ### Loader
 
 A module loader initialises the module object, including the fields, their types, and any C functions that the module
@@ -130,7 +135,7 @@ This is less than 30 lines of code! This is practically all that is required of 
 Once your module code has been written (ideally in a single source file), you need to recompile ALCA to have it
 recognised by the engine.
 
-1. Add an entry for your module to the module.list file, located in `alca/libalca/include/alca/`.
+1. Add an entry for your module to the `module.list` file, located in `alca/libalca/include/alca/`.
    ```
    MODULE(<module_name>)
    ```

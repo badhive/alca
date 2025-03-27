@@ -44,8 +44,8 @@ rule detect_foo_ransomware : file {
 Let's break it down:
 1. The rule first checks if the file action matches the user-defined enum `FILE_RENAME` (meaning, a file was renamed).
 If this condition is true, then the second condition (on the right hand side of `and`) is evaluated.
-2. The rule then does a **case-insensitive** check on the new file name to see if it ends with ".foo" (int other words, if
-the extension has changed). If both these conditions are true, then the rule is flagged as true and we receive a
+2. The rule then does a **case-insensitive** check on the new file name to see if it ends with ".foo" (in other words, if
+the extension has changed). If both these conditions are true, then the rule is flagged as true, and we receive a
 notification similar to the one below:
 
 ```
