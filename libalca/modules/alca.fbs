@@ -1,0 +1,141 @@
+// IDL file for standard ALCA sensors.
+
+namespace Sensor;
+
+enum FileAction : byte {
+    FileCreate,
+    FileRename,
+    FileDelete,
+    FileModify
+}
+
+table FileSection {
+    name:string;
+    size:int;
+    entropy:long;
+}
+
+table FileImport {
+    name:string;
+    functions:[string];
+}
+
+// windows-specific file event data
+table WinPE {
+    arch:string;
+    is_dotnet:bool;
+    sections:[FileSection];
+    imports:[FileImport];
+}
+
+table FileEvent {
+    action:FileAction;
+
+    name:string;
+    path:string;
+    // directory that it resides in
+    directory:string;
+    extension:string;
+
+    owner:string;
+    size:long;
+    mode:short;
+    created_at:long;
+    modified_at:long;
+
+    pe:WinPE;
+
+    // rename-specific
+    new_name:string;
+}
+
+enum NetworkAction : byte {
+    NetAccept,
+    NetConnect,
+    NetDisconnect,
+    NetSend,
+    NetReceive
+}
+
+table NetworkEvent {
+    action:NetworkAction;
+    tcp:bool;
+    udp:bool;
+    local_addr:string;
+    local_port:short;
+    remote_addr:string;
+    remote_port:short;
+
+    // send / receive specific
+    packet_size:int;
+}
+
+enum ProcessAction : byte {
+    ProcessStart,
+    ProcessEnd,
+    ThreadCreate,
+    ThreadTerminate,
+    ImageLoad,
+    ImageUnload,
+    AllocLocal,
+    AllocRemote
+}
+
+// windows-specific process event data
+table WinProcess {
+    // action = ImageLoad / ImageUnload
+    image_name:string;
+    image_size:int;
+
+    // action = AllocLocal / AllocRemote
+    alloc_size:long;
+    alloc_data:[ubyte];
+}
+
+table ProcessEvent {
+    action:ProcessAction;
+    // subject pid
+    pid:int;
+    // parent pid
+    ppid:int;
+    // pid of running binary
+    self_pid:int;
+
+    // action = ProcessStart
+    name:string;
+    command_line:string;
+
+    win:WinProcess;
+}
+
+enum RegistryAction : byte {
+    RegCreateKey,
+    RegSetValue,
+    RegDeleteKey,
+    RegDeleteValue,
+}
+
+enum RegistryValueType : byte {
+    RegBinary,
+    RegDWord,
+    RegQWord,
+    RegString,
+    RegStringList,
+    RegLink
+}
+
+table RegistryValue {
+    int_:long;
+    str_:string;
+    strlist:[string];
+    binary:[ubyte];
+}
+
+table RegistryEvent {
+    action:RegistryAction;
+    key_path:string;
+    value_name:string;
+
+    value_type:RegistryValueType;
+    value:RegistryValue;
+}
