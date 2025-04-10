@@ -136,7 +136,7 @@ uint32_t ac_arena_add_uint32(ac_arena *arena, uint32_t value)
 {
     uint32_t offset = arena->size;
     arena_extend(arena, sizeof(uint32_t));
-    memcpy(arena->data + arena->size, &(uint32_t){b2l(value)}, sizeof(uint32_t));
+    memcpy(arena->data + arena->size, &(uint32_t){netint(value)}, sizeof(uint32_t));
     arena->size += sizeof(uint32_t);
     return offset;
 }

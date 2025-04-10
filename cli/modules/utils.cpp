@@ -14,33 +14,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef AC_CONN_H
-#define AC_CONN_H
+#include "modules.hpp"
 
-#ifdef _WIN32
-#ifndef _WIN32_WINNT // NOLINT(*-reserved-identifier)
-#define _WIN32_WINNT 0x0501  /* Windows XP. */
-#endif
-#include <winsock2.h>
-#else
-typedef int SOCKET;
-#define INVALID_SOCKET (~0)
-#define SOCKET_ERROR -1
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h> // close()
-#include <netdb.h>  // getaddrinfo(), freeaddrinfo()
-#endif
-#include <cstdint>
+using namespace alca::modules;
 
-int conn_api_init();
-
-int conn_api_shutdown();
-
-SOCKET conn_connect(const char *address, uint16_t port);
-
-void conn_close(SOCKET conn);
-
-int conn_last_error();
-
-#endif //AC_CONN_H
+void utils::set_string_field(ac_module *module, const char *field_name, const flatbuffers::String *value)
+{
+    if (value == nullptr)
+        return;
+    ac_module_set_string_field(module, field_name, value->c_str());
+}

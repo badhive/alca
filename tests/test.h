@@ -22,12 +22,12 @@
 #include <alca/module.h>
 
 typedef unsigned char bool;
-typedef struct _ac_test ac_test;
+typedef struct ac_test ac_test;
 
 typedef void (*ac_test_function)(ac_test *);
 
-typedef struct _ac_tester ac_tester;
-typedef struct _ac_test_file ac_test_file;
+typedef struct ac_tester ac_tester;
+typedef struct ac_test_file ac_test_file;
 
 #ifdef _WIN32
 #define PSS "\\"
@@ -105,7 +105,7 @@ typedef struct _ac_test_file ac_test_file;
     } \
     return __ac_test_retval; }
 
-struct _ac_test
+struct ac_test
 {
     const char *name;
     int pos;
@@ -113,24 +113,24 @@ struct _ac_test
     bool free_msg;
     bool test_fail;
     ac_test_function test_function;
-    struct _ac_test *next;
+    struct ac_test *next;
 };
 
-struct _ac_tester
+struct ac_tester
 {
     ac_test *tests;
     int test_count;
     bool any_test_fail;
 };
 
-struct _ac_test_file
+struct ac_test_file
 {
     const char *name;
     size_t size;
     char *data;
 };
 
-ac_module *ac_test_module_file_callback();
+ac_module_table_entry ac_test_file_module();
 
 void ac_test_open_file(const char *path, ac_test_file *testFile);
 

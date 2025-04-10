@@ -210,7 +210,7 @@ void test_psr_parse_indexCall(ac_test *t)
     ac_lexer *lexer = getFileLexer(filename);
     ac_parser *parser = ac_psr_new(lexer);
     ac_ast *program = ac_psr_parse(parser);
-    if (ac_psr_get_last_error(parser) != ERROR_SUCCESS)
+    if (ac_psr_get_last_error(parser) != AC_ERROR_SUCCESS)
     {
         ac_test_error(t, ac_psr_get_last_error_message(parser));
     }
@@ -263,7 +263,7 @@ void test_psr_parse_complexRule(ac_test *t)
     ac_lexer *lexer = getFileLexer(filename);
     ac_parser *parser = ac_psr_new(lexer);
     ac_ast *program = ac_psr_parse(parser);
-    if (ac_psr_get_last_error(parser) != ERROR_SUCCESS)
+    if (ac_psr_get_last_error(parser) != AC_ERROR_SUCCESS)
     {
         ac_test_error(t, ac_psr_get_last_error_message(parser));
     }
@@ -316,7 +316,7 @@ void test_psr_parse_simpleRule(ac_test *t)
     ac_lexer *lexer = getFileLexer(filename);
     ac_parser *parser = ac_psr_new(lexer);
     ac_ast *program = ac_psr_parse(parser);
-    if (ac_psr_get_last_error(parser) != ERROR_SUCCESS)
+    if (ac_psr_get_last_error(parser) != AC_ERROR_SUCCESS)
     {
         ac_test_error(t, ac_psr_get_last_error_message(parser));
     }

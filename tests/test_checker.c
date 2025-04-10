@@ -37,7 +37,7 @@ ac_ast *getAst(ac_test *t, const char *filename)
     ac_lex_scan(lexer);
     ac_parser *parser = ac_psr_new(lexer);
     ac_ast *ast = ac_psr_parse(parser);
-    if (parser->error.code != ERROR_SUCCESS)
+    if (parser->error.code != AC_ERROR_SUCCESS)
     {
         t->test_fail = 1;
         t->error_msg = parser->error.message;
@@ -53,7 +53,8 @@ void test_checker_check_dupRule(ac_test *t)
     ac_ast *ast = getAst(t, filename);
     if (!ast) return;
     ac_context *ctx = ac_context_new();
-    ac_context_add_module_load_callback(ctx, "file", ac_test_module_file_callback);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_context_add_module(ctx, &file_module);
     ac_checker *checker = ac_checker_new(ast, ctx);
     if (ac_checker_check(checker))
         ac_test_error(t, "expected errors");
@@ -81,7 +82,8 @@ void test_checker_check_invalidSeqRule(ac_test *t)
     ac_ast *ast = getAst(t, filename);
     if (!ast) return;
     ac_context *ctx = ac_context_new();
-    ac_context_add_module_load_callback(ctx, "file", ac_test_module_file_callback);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_context_add_module(ctx, &file_module);
     ac_checker *checker = ac_checker_new(ast, ctx);
     if (ac_checker_check(checker))
         ac_test_error(t, "expected errors");
@@ -109,7 +111,8 @@ void test_checker_check_invalidSequence(ac_test *t)
     ac_ast *ast = getAst(t, filename);
     if (!ast) return;
     ac_context *ctx = ac_context_new();
-    ac_context_add_module_load_callback(ctx, "file", ac_test_module_file_callback);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_context_add_module(ctx, &file_module);
     ac_checker *checker = ac_checker_new(ast, ctx);
     if (ac_checker_check(checker))
         ac_test_error(t, "expected errors");
@@ -137,7 +140,8 @@ void test_checker_check_complexEval(ac_test *t)
     ac_ast *ast = getAst(t, filename);
     if (!ast) return;
     ac_context *ctx = ac_context_new();
-    ac_context_add_module_load_callback(ctx, "file", ac_test_module_file_callback);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_context_add_module(ctx, &file_module);
     ac_checker *checker = ac_checker_new(ast, ctx);
     if (!ac_checker_check(checker))
     {
@@ -159,7 +163,8 @@ void test_checker_check_invalidOps(ac_test *t)
     ac_ast *ast = getAst(t, filename);
     if (!ast) return;
     ac_context *ctx = ac_context_new();
-    ac_context_add_module_load_callback(ctx, "file", ac_test_module_file_callback);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_context_add_module(ctx, &file_module);
     ac_checker *checker = ac_checker_new(ast, ctx);
     if (ac_checker_check(checker))
         ac_test_error(t, "expected errors");
@@ -205,7 +210,8 @@ void test_checker_check_noBool(ac_test *t)
     ac_ast *ast = getAst(t, filename);
     if (!ast) return;
     ac_context *ctx = ac_context_new();
-    ac_context_add_module_load_callback(ctx, "file", ac_test_module_file_callback);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_context_add_module(ctx, &file_module);
     ac_checker *checker = ac_checker_new(ast, ctx);
     if (ac_checker_check(checker))
         ac_test_error(t, "expected errors");
@@ -232,7 +238,8 @@ void test_checker_check_badImport(ac_test *t)
     ac_ast *ast = getAst(t, filename);
     if (!ast) return;
     ac_context *ctx = ac_context_new();
-    ac_context_add_module_load_callback(ctx, "file", ac_test_module_file_callback);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_context_add_module(ctx, &file_module);
     ac_checker *checker = ac_checker_new(ast, ctx);
     if (ac_checker_check(checker))
         ac_test_error(t, "expected errors");
@@ -264,7 +271,8 @@ void test_checker_check_validRule(ac_test *t)
     ac_ast *ast = getAst(t, filename);
     if (!ast) return;
     ac_context *ctx = ac_context_new();
-    ac_context_add_module_load_callback(ctx, "file", ac_test_module_file_callback);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_context_add_module(ctx, &file_module);
     ac_checker *checker = ac_checker_new(ast, ctx);
     if (!ac_checker_check(checker))
     {

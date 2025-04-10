@@ -14,96 +14,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <alca.h>
+#include <alca/defaults.h>
 
-#include "alca_reader.h"
-
-// Convenient namespace macro to manage long namespace prefix.
-#undef ns
-// Specified in the schema.
-#define ns(x) FLATBUFFERS_WRAP_NAMESPACE(Sensor, x)
-
-// A helper to simplify creating vectors from C-arrays.
-#define c_vec_len(V) (sizeof(V)/sizeof((V)[0]))
-
-void file_unload_callback(ac_module *module) {}
-
-int file_event_unmarshaller(ac_module *module, const unsigned char *event_data)
-{
-    ns(FileEvent_table_t) file_event = ns(FileEvent_as_root(event_data));
-
-    ac_module_set_uint32_field(module, "action", ns(FileEvent_action(file_event)));
-
-    ac_module_set_string_field(module, "name", (char *)ns(FileEvent_name(file_event)));
-    ac_module_set_string_field(module, "path", (char *)ns(FileEvent_path(file_event)));
-    ac_module_set_string_field(module, "directory", (char *)ns(FileEvent_directory(file_event)));
-    ac_module_set_string_field(module, "extension", (char *)ns(FileEvent_extension(file_event)));
-
-    ac_module_set_string_field(module, "owner", (char *)ns(FileEvent_owner(file_event)));
-    ac_module_set_uint32_field(module, "size", ns(FileEvent_size(file_event)));
-    ac_module_set_uint32_field(module, "mode", ns(FileEvent_mode(file_event)));
-    ac_module_set_uint32_field(module, "created_at", ns(FileEvent_created_at(file_event)));
-    ac_module_set_uint32_field(module, "modified_at", ns(FileEvent_modified_at(file_event)));
-
-    ac_module_set_string_field(module, "new_name", (char *)ns(FileEvent_new_name(file_event)));
-
-    ac_module *pe = ac_module_get_field(module, "pe");
-    ns(WinPE_table_t) pe_table = ns(FileEvent_pe(file_event));
-
-    ac_module_set_string_field(pe, "arch", (char *)ns(WinPE_arch(pe_table)));
-    ac_module_set_uint32_field(pe, "is_dotnet", ns(WinPE_is_dotnet(pe_table)));
-
-    ac_module *sections = ac_module_get_field(pe, "sections");
-    ac_module *imports = ac_module_get_field(pe, "imports");
-    ns(FileSection_vec_t) section_vec = ns(WinPE_sections(pe_table));
-    ns(FileImport_vec_t) import_vec = ns(WinPE_imports(pe_table));
-
-    size_t section_vec_len = ns(FileSection_vec_len(section_vec));
-    size_t import_vec_len = ns(FileImport_vec_len(import_vec));
-    ac_module_set_uint32_field(pe, "section_count", section_vec_len);
-    ac_module_set_uint32_field(pe, "import_count", import_vec_len);
-
-    for (size_t i = 0; i < section_vec_len; i++)
-    {
-        ns(FileSection_table_t) section_table = ns(FileSection_vec_at(section_vec, i));
-        ac_module *object = ac_module_create_item_for_struct_array(sections);
-        ac_module_set_string_field(object, "name", (char *)ns(FileSection_name(section_table)));
-        ac_module_set_uint32_field(object, "size", ns(FileSection_size(section_table)));
-        ac_module_set_uint32_field(object, "entropy", ns(FileSection_entropy(section_table)));
-        ac_module_array_field_append(sections, AC_FIELD_TYPE_STRUCT, &(ac_object){.o = object});
-    }
-
-    for (size_t i = 0; i < import_vec_len; i++)
-    {
-        ns(FileImport_table_t) import_table = ns(FileImport_vec_at(section_vec, i));
-        flatbuffers_string_vec_t functions = ns(FileImport_functions(import_table));
-        size_t functions_count = flatbuffers_string_vec_len(functions);
-
-        ac_module *object = ac_module_create_item_for_struct_array(imports);
-        ac_module *functions_object = ac_module_get_field(object, "functions");
-
-        ac_module_set_string_field(object, "name", (char *)ns(FileImport_name(import_table)));
-        for (size_t j = 0; j < functions_count; j++)
-        {
-            char *str = (char *)flatbuffers_string_vec_at(functions, j);
-            ac_module_array_field_append(functions_object, AC_FIELD_TYPE_STRING, &(ac_object){.s = str});
-        }
-        ac_module_array_field_append(imports, AC_FIELD_TYPE_STRUCT, &(ac_object){.o = object});
-    }
-    return TRUE;
-}
-
-ac_module *file_load_callback()
+ac_module *ac_default_file_load_callback()
 {
     enum file_event_action
     {
-        FILE_CREATE,
-        FILE_RENAME,
-        FILE_DELETE,
-        FILE_MODIFY,
+        FILE_CREATE = 0,
+        FILE_RENAME = 1,
+        FILE_DELETE = 2,
+        FILE_MODIFY = 3,
     };
     ac_module *module = ac_module_create("file", ALCA_VERSION, NULL);
-    ac_module_set_unmarshaller(module, file_event_unmarshaller);
 
     ac_module_add_field(module, "action", AC_FIELD_TYPE_INTEGER);
 
@@ -141,4 +63,13 @@ ac_module *file_load_callback()
     ac_module_add_enum(module, FILE_MODIFY);
 
     return module;
+}
+
+// developer-implemented
+void ac_default_file_unload_callback(const ac_module *module) {}
+
+// developer-implemented
+int ac_default_file_unmarshal_callback(ac_module *module, const unsigned char *event_data)
+{
+    return FALSE;
 }

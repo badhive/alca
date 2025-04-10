@@ -51,19 +51,25 @@ struct ac_context_env_item
     void *ext;
 };
 
-
-
 typedef void (*ac_context_object_freer)(ac_context_object *object);
 
 typedef ac_context_object ac_module;
 
 typedef ac_module *(*ac_module_load_callback)();
 
-typedef void (*ac_module_unload_callback)(ac_module *);
+typedef void (*ac_module_unload_callback)(const ac_module *);
 
-typedef int (*ac_context_object_event_unmarshaller)(ac_module *module, const unsigned char *edata);
+typedef int (*ac_module_event_unmarshaller)(ac_module *module, const unsigned char *edata);
 
 typedef ac_error (*ac_module_function)(ac_module *fn_object, ac_object *args, ac_object *result);
+
+typedef struct ac_module_table_entry
+{
+    const char *name;
+    ac_module_load_callback load_callback;
+    ac_module_unload_callback unload_callback;
+    ac_module_event_unmarshaller unmarshal_callback;
+} ac_module_table_entry;
 
 ac_context *ac_context_new();
 
@@ -193,27 +199,24 @@ void *ac_context_get_environment(ac_context *ctx);
  *
  * @param ctx context
  * @param name name of module
- * @param callback receives callback function pointer if module exists
+ * @param module receives module entry if it exists
  * @return TRUE if module exists, FALSE otherwise
  */
-int ac_context_get_module(ac_context *ctx, const char *name, ac_module_load_callback *callback);
+int ac_context_get_module(ac_context *ctx, const char *name, ac_module_table_entry *module);
 
 uint32_t ac_context_object_get_module_version(ac_context_object *object);
 
 size_t ac_context_object_get_field_count(ac_context_object *object);
 
-/** [INTERNAL] Adds a module load callback that is triggered when a module is imported.
+/** [INTERNAL] Adds a module is triggered when a module is imported.
  * Once the module is imported, the context object is freed internally.
  *
  * @param ctx context object
- * @param module_name name of module, should match the name of the object that the callback returns
- * @param callback callback function.
+ * @param module module table entry.
  */
-void ac_context_add_module_load_callback(ac_context *ctx, const char *module_name, ac_module_load_callback callback);
+void ac_context_add_module(ac_context *ctx, ac_module_table_entry *module);
 
 void ac_context_load_modules(ac_context *ctx);
-
-void ac_context_object_set_unmarshaller(ac_context_object *object, ac_context_object_event_unmarshaller unmarshal);
 
 int ac_context_object_unmarshal_evtdata(ac_context_object *object, unsigned char *edata);
 

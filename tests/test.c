@@ -16,11 +16,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "test.h"
-
 #include <string.h>
+
 #include <alca/module.h>
+#include "test.h"
 
 typedef struct test_unmarshal_t
 {
@@ -184,6 +183,9 @@ int ac_test_module_file_unmarshal(ac_module *module, const unsigned char *edata)
     return TRUE;
 }
 
+void ac_test_module_file_unload(const ac_module*)
+{}
+
 ac_module *ac_test_module_file_callback()
 {
     enum file_event_action
@@ -194,7 +196,6 @@ ac_module *ac_test_module_file_callback()
         FILE_RENAME,
     };
     ac_module *module = ac_module_create("file", AC_VERSION(0, 0, 0), NULL);
-    ac_module_set_unmarshaller(module, ac_test_module_file_unmarshal);
     ac_module_add_field(module, "action", AC_FIELD_TYPE_INTEGER);
     ac_module_add_field(module, "size", AC_FIELD_TYPE_INTEGER);
     ac_module_add_field(module, "extension", AC_FIELD_TYPE_STRING);
@@ -209,5 +210,15 @@ ac_module *ac_test_module_file_callback()
     ac_module_add_enum(module, FILE_DELETE);
     ac_module_add_enum(module, FILE_MODIFY);
     ac_module_add_enum(module, FILE_RENAME);
+    return module;
+}
+
+ac_module_table_entry ac_test_file_module()
+{
+    ac_module_table_entry module;
+    module.name = "file";
+    module.load_callback = ac_test_module_file_callback;
+    module.unload_callback = ac_test_module_file_unload;
+    module.unmarshal_callback = ac_test_module_file_unmarshal;
     return module;
 }

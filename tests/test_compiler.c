@@ -33,10 +33,11 @@ void test_compiler_module(ac_test *t)
     const char *path = AC_PATH_JOIN("tests", "data", "cpl_module.alca");
     ac_compiler *compiler = ac_compiler_new();
     ac_error error = ac_compiler_add_file(compiler, path);
-    ac_test_assert_int32_eq(t, error, ERROR_SUCCESS);
-    ac_compiler_include_module(compiler, "file", ac_test_module_file_callback);
+    ac_test_assert_int32_eq(t, error, AC_ERROR_SUCCESS);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_compiler_include_module(compiler, &file_module);
     error = ac_compiler_compile(compiler, NULL);
-    ac_test_assert_int32_eq(t, error, ERROR_SUCCESS);
+    ac_test_assert_int32_eq(t, error, AC_ERROR_SUCCESS);
 
     ac_arena *data = __ac_compiler_get_data(compiler);
     ac_arena *code = ac_arena_create(0);
@@ -74,9 +75,9 @@ void test_compiler_logicAnd(ac_test *t)
     const char *path = AC_PATH_JOIN("tests", "data", "cpl_logicAnd.alca");
     ac_compiler *compiler = ac_compiler_new();
     ac_error error = ac_compiler_add_file(compiler, path);
-    ac_test_assert_int32_eq(t, error, ERROR_SUCCESS);
+    ac_test_assert_int32_eq(t, error, AC_ERROR_SUCCESS);
     error = ac_compiler_compile(compiler, NULL);
-    ac_test_assert_int32_eq(t, error, ERROR_SUCCESS);
+    ac_test_assert_int32_eq(t, error, AC_ERROR_SUCCESS);
 
     ac_arena *code = ac_arena_create(0);
     ac_arena_add_code_with_arg(code, OP_PUSHINT, 4);
@@ -105,9 +106,9 @@ void test_compiler_arithmetic(ac_test *t)
     const char *path = AC_PATH_JOIN("tests", "data", "cpl_arithmetic.alca");
     ac_compiler *compiler = ac_compiler_new();
     ac_error error = ac_compiler_add_file(compiler, path);
-    ac_test_assert_int32_eq(t, error, ERROR_SUCCESS);
+    ac_test_assert_int32_eq(t, error, AC_ERROR_SUCCESS);
     error = ac_compiler_compile(compiler, NULL);
-    ac_test_assert_int32_eq(t, error, ERROR_SUCCESS);
+    ac_test_assert_int32_eq(t, error, AC_ERROR_SUCCESS);
 
     ac_arena *code = ac_arena_create(0);
     ac_arena_add_code_with_arg(code, OP_PUSHINT, 2);

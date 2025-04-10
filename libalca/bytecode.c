@@ -34,7 +34,7 @@ ac_error bytecode_emit_expr(ac_builder *builder, ac_expr *expr);
 ac_error bytecode_emit_unary(ac_builder *builder, ac_expr *expr)
 {
     ac_error err = bytecode_emit_expr(builder, expr->u.unary.right);
-    if (err != ERROR_SUCCESS)
+    if (err != AC_ERROR_SUCCESS)
         return err;
     switch (expr->u.unary.op->type)
     {
@@ -45,7 +45,7 @@ ac_error bytecode_emit_unary(ac_builder *builder, ac_expr *expr)
         case TOKEN_HASH: ac_arena_add_code(builder->code, OP_STRLEN); break;
         default: ;
     }
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 ac_error bytecode_emit_binary(ac_builder *builder, ac_expr *expr)
@@ -55,7 +55,7 @@ ac_error bytecode_emit_binary(ac_builder *builder, ac_expr *expr)
 
     // emit LHS first
     err = bytecode_emit_expr(builder, expr->u.binary.left);
-    if (err != ERROR_SUCCESS)
+    if (err != AC_ERROR_SUCCESS)
         return err;
     ac_token_type op_type = expr->u.binary.op->type;
 
@@ -70,7 +70,7 @@ ac_error bytecode_emit_binary(ac_builder *builder, ac_expr *expr)
     }
     // emit RHS
     err = bytecode_emit_expr(builder, expr->u.binary.right);
-    if (err != ERROR_SUCCESS)
+    if (err != AC_ERROR_SUCCESS)
         return err;
 
     // patch JMP over RHS to end of RHS expression
@@ -130,7 +130,7 @@ ac_error bytecode_emit_binary(ac_builder *builder, ac_expr *expr)
             break;
         default: ;
     }
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 void bytecode_emit_literal(ac_builder *builder, ac_expr *expr)
@@ -182,11 +182,11 @@ void bytecode_emit_literal(ac_builder *builder, ac_expr *expr)
 
 ac_error bytecode_emit_call(ac_builder *builder, ac_expr *expr)
 {
-    ac_error error = ERROR_SUCCESS;
+    ac_error error = AC_ERROR_SUCCESS;
     // push args right to left
     for (int i = (int)expr->u.call.arg_count - 1; i >= 0; i--)
     {
-        if ((error = bytecode_emit_expr(builder, expr)) != ERROR_SUCCESS)
+        if ((error = bytecode_emit_expr(builder, expr)) != AC_ERROR_SUCCESS)
             return error;
     }
     ac_arena_add_code_with_arg(builder->code, OP_PUSHINT, expr->u.call.arg_count);
@@ -215,10 +215,10 @@ void bytecode_emit_field(ac_builder *builder, ac_expr *expr)
 ac_error bytecode_emit_index(ac_builder *builder, ac_expr *expr)
 {
     ac_error error = bytecode_emit_expr(builder, expr->u.index.object);
-    if (error != ERROR_SUCCESS)
+    if (error != AC_ERROR_SUCCESS)
         return error;
     error = bytecode_emit_expr(builder, expr->u.index.index);
-    if (error != ERROR_SUCCESS)
+    if (error != AC_ERROR_SUCCESS)
         return error;
     ac_arena_add_code(builder->code, OP_INDEX); // pop idx; pop array_object; push array_object[idx]
     return error;
@@ -299,7 +299,7 @@ void bytecode_emit_range(ac_builder *builder, ac_expr *expr)
 
 ac_error bytecode_emit_expr(ac_builder *builder, ac_expr *expr)
 {
-    ac_error error = ERROR_SUCCESS;
+    ac_error error = AC_ERROR_SUCCESS;
     switch (expr->type)
     {
         case EXPR_BINARY: error = bytecode_emit_binary(builder, expr); break;
@@ -316,18 +316,18 @@ ac_error bytecode_emit_expr(ac_builder *builder, ac_expr *expr)
 
 ac_error ac_bytecode_emit_rule(ac_builder *builder, ac_statement *rule)
 {
-    ac_module_load_callback callback;
+    ac_module_table_entry module;
     if (rule->u.rule.event)
     {
-        if (!ac_context_get_module(builder->ctx, rule->u.rule.event->value, &callback))
-            return ERROR_MODULE;
+        if (!ac_context_get_module(builder->ctx, rule->u.rule.event->value, &module))
+            return AC_ERROR_MODULE;
         builder->module_name = rule->u.rule.event->value;
     }
     if (rule->u.rule.external)
-        return ERROR_SUCCESS; // external rules have no code to emit
+        return AC_ERROR_SUCCESS; // external rules have no code to emit
     ac_error err = bytecode_emit_expr(builder, rule->u.rule.condition);
-    if (err != ERROR_SUCCESS)
+    if (err != AC_ERROR_SUCCESS)
         return err;
     ac_arena_add_code(builder->code, OP_HLT); // indicates end of rule. vm exits loop when it sees halt
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }

@@ -28,7 +28,7 @@
 struct ac_context
 {
     struct hashmap *objects;
-    struct hashmap *module_callbacks;
+    struct hashmap *modules;
     struct hashmap *environment;
 };
 
@@ -48,41 +48,9 @@ struct ac_context_object
     const char *arg_types;
 
     // if top-level module, use function to unmarshal event data into context object
-    ac_context_object_event_unmarshaller unmarshal;
+    ac_module_event_unmarshaller unmarshal;
     ac_context_object_freer free;
     void *extended_data;
-};
-
-typedef struct ac_module_loader
-{
-    const char *name;
-    ac_module_load_callback load_callback;
-    ac_module_unload_callback unload_callback;
-} ac_module_loader;
-
-// basically stole the idea from yara hehehe
-
-// declare module load / unload functions
-
-#define MODULE(n) \
-ac_module *n##_load_callback(); \
-ac_module *n##_unload_callback(); \
-
-#include <alca/module.list>
-
-#undef MODULE
-
-// add module load / unload callbacks to loader list
-
-#define MODULE(n) { \
-.name = #n, \
-.load_callback = n##_load_callback, \
-.unload_callback = n##_unload_callback \
-}, \
-
-ac_module_loader module_loaders[] = {
-#include <alca/module.list>
-    { NULL, NULL, NULL }
 };
 
 int context_object_cmp(const void *a, const void *b, void *c)
@@ -100,14 +68,14 @@ uint64_t context_object_hash(const void *item, uint64_t seed0, uint64_t seed1)
 
 int module_cmp(const void *a, const void *b, void *c)
 {
-    const ac_module_loader *obja = a;
-    const ac_module_loader *objb = b;
+    const ac_module_table_entry *obja = a;
+    const ac_module_table_entry *objb = b;
     return strcmp(obja->name, objb->name);
 }
 
 uint64_t module_hash(const void *item, uint64_t seed0, uint64_t seed1)
 {
-    const ac_module_loader *obj = item;
+    const ac_module_table_entry *obj = item;
     return hashmap_murmur(obj->name, strlen(obj->name), seed0, seed1);
 }
 
@@ -136,24 +104,26 @@ ac_context *ac_context_new()
     ac_context *ctx = ac_alloc(sizeof(ac_context));
     ctx->objects = hashmap_new(sizeof(ac_context_object), 0, 0, 0,
                                context_object_hash, context_object_cmp, ac_context_object_free_internals, NULL);
-    ctx->module_callbacks = hashmap_new(sizeof(ac_module_loader), 0, 0, 0,
+    ctx->modules = hashmap_new(sizeof(ac_module_table_entry), 0, 0, 0,
                                         module_hash, module_cmp, NULL, NULL);
     ctx->environment = hashmap_new(sizeof(ac_context_env_item), 0, 0, 0,
                                env_item_hash, env_item_cmp, NULL, NULL);
-    int idx = 0;
-    while (1)
-    {
-        if (module_loaders[idx].name == NULL)
-            break;
-        ac_context_add_module_load_callback(ctx, module_loaders[idx].name, module_loaders[idx].load_callback);
-    }
     return ctx;
 }
 
 void ac_context_free(ac_context *ctx)
 {
+    void *item;
+    size_t i = 0;
+    while (hashmap_iter(ctx->modules, &i, &item))
+    {
+        const ac_module_table_entry *module = item;
+        const ac_module *loaded = hashmap_get(ctx->objects, &(ac_context_object){.name = module->name});
+        if (loaded && module->unload_callback)
+            module->unload_callback(loaded); // unload modules before freeing context
+    }
     hashmap_free(ctx->objects);
-    hashmap_free(ctx->module_callbacks);
+    hashmap_free(ctx->modules);
     hashmap_free(ctx->environment);
     ac_free(ctx);
 }
@@ -197,20 +167,20 @@ ac_context_object *ac_context_add_toplevel_function(ac_context *ctx, const char 
 ac_error ac_context_validate_function_call(ac_context_object *fn, const char *args, unsigned int *count, const char **types)
 {
     if (!(fn->field_type & AC_FIELD_TYPE_FUNCTION))
-        return ERROR_BAD_LITERAL;
+        return AC_ERROR_BAD_LITERAL;
     *count = fn->arg_count;
     *types = fn->arg_types;
     if (args == NULL)
     {
         if (fn->arg_count == 0)
             return TRUE;
-        return ERROR_BAD_CALL;
+        return AC_ERROR_BAD_CALL;
     }
     if (strlen(args) != fn->arg_count)
-        return ERROR_BAD_CALL;
+        return AC_ERROR_BAD_CALL;
     if (strncmp(fn->arg_types, args, fn->arg_count + 1) != 0)
-        return ERROR_UNEXPECTED_TYPE;
-    return ERROR_SUCCESS;
+        return AC_ERROR_UNEXPECTED_TYPE;
+    return AC_ERROR_SUCCESS;
 }
 
 void ac_context_object_set_function(ac_context_object *object, ac_module_function c_function, const char *args)
@@ -305,12 +275,12 @@ void *ac_context_get_environment(ac_context *ctx)
     return ctx->environment;
 }
 
-int ac_context_get_module(ac_context *ctx, const char *name, ac_module_load_callback *callback)
+int ac_context_get_module(ac_context *ctx, const char *name, ac_module_table_entry *module)
 {
-    ac_module_loader *ldr = (ac_module_loader *) hashmap_get(ctx->module_callbacks, &(ac_module_loader){.name = name});
-    if (!ldr)
+    ac_module_table_entry *item = (ac_module_table_entry *) hashmap_get(ctx->modules, &(ac_module_table_entry){.name = name});
+    if (!item)
         return FALSE;
-    *callback = ldr->load_callback;
+    *module = *item;
     return TRUE;
 }
 
@@ -319,35 +289,29 @@ uint32_t ac_context_object_get_module_version(ac_context_object *object)
     return object->version;
 }
 
-void ac_context_add_module_load_callback(
-    ac_context *ctx,
-    const char *module_name,
-    ac_module_load_callback callback)
+// will overwrite a modul
+void ac_context_add_module(ac_context *ctx, ac_module_table_entry *module)
 {
-    ac_module_loader module = {.name = module_name, .load_callback = callback};
-    hashmap_set(ctx->module_callbacks, &module);
+    hashmap_set(ctx->modules, module);
 }
 
 void ac_context_load_modules(ac_context *ctx)
 {
     void *item;
     size_t i = 0;
-    while (hashmap_iter(ctx->module_callbacks, &i, &item))
+    while (hashmap_iter(ctx->modules, &i, &item))
     {
-        const ac_module_loader *module = item;
+        const ac_module_table_entry *module = item;
         if (hashmap_get(ctx->objects, &(ac_context_object){.name = module->name}))
             return; // already loaded
         ac_context_object *object = module->load_callback(); // object was created with ac_context_create_module_object
-        hashmap_set(ctx->objects, object);
-        ac_free(object);
+        if (object)
+        {
+            object->unmarshal = module->unmarshal_callback;
+            hashmap_set(ctx->objects, object);
+            ac_free(object);
+        }
     }
-}
-
-void ac_context_object_set_unmarshaller(ac_context_object *object, ac_context_object_event_unmarshaller unmarshal)
-{
-    if (!(object->field_type & AC_FIELD_TYPE_STRUCT && object->field_type & AC_FIELD_TYPE_TOPLEVEL)) // only work on modules
-        return;
-    object->unmarshal = unmarshal;
 }
 
 int ac_context_object_unmarshal_evtdata(ac_context_object *object, unsigned char *edata)

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 project(alca C CXX)
 
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(ALCA_SOURCES libalca/lexer.c
@@ -20,44 +20,53 @@ set(ALCA_SOURCES libalca/lexer.c
         libalca/packet.c
 )
 
+set (ALCA_MODULES libalca/modules/file.c)
+
 set(ALCA_INCLUDES "${CMAKE_SOURCE_DIR}/libalca/include"
         "${CMAKE_SOURCE_DIR}/libs/include"
+        "${CMAKE_SOURCE_DIR}/libs/flatbuffers/include"
 )
 
 # External libraries
 
 ## pcre2
+option(PCRE2_BUILD_PCRE2GREP "" OFF)
 add_subdirectory("${CMAKE_SOURCE_DIR}/libs/pcre2")
 add_compile_definitions(PCRE2_CODE_UNIT_WIDTH=8)
 
-## CLI11
-set(LIB_CLI11_INCLUDES "${CMAKE_SOURCE_DIR}/libs/CLI11/include")
+## flatbuffers
+add_subdirectory("${CMAKE_SOURCE_DIR}/libs/flatbuffers")
 
-# Libraries
+set(ALCA_CLI_INCLUDES "${CMAKE_SOURCE_DIR}/libs/CLI11/include"
+        "${CMAKE_SOURCE_DIR}/libs/flatbuffers/include"
+)
+
+set(ALCA_LINK_LIBRARIES pcre2-8-static)
 
 ## alca-static
-add_library(alca-static STATIC ${ALCA_SOURCES})
+add_library(alca-static STATIC ${ALCA_SOURCES} ${ALCA_MODULES})
 target_include_directories(alca-static PUBLIC ${ALCA_INCLUDES})
-target_compile_definitions(alca-static PUBLIC ALCA_BUILD_STATIC
-        "ALCA_BUILD_DEBUG=$<CONFIG:Debug>")
-target_link_libraries(alca-static pcre2-8-static)
+target_compile_definitions(alca-static PUBLIC ALCA_BUILD_STATIC "ALCA_BUILD_DEBUG=$<CONFIG:Debug>")
+target_link_libraries(alca-static ${ALCA_LINK_LIBRARIES})
 
 ## alca-shared
-add_library(alca-shared SHARED ${ALCA_SOURCES})
+add_library(alca-shared SHARED ${ALCA_SOURCES} ${ALCA_MODULES})
 target_include_directories(alca-shared PRIVATE ${ALCA_INCLUDES})
-target_compile_definitions(alca-shared PRIVATE ALCA_BUILD_DLL
-        "ALCA_BUILD_DEBUG=$<CONFIG:Debug>")
-target_link_libraries(alca-shared pcre2-8-static)
+target_compile_definitions(alca-shared PRIVATE ALCA_BUILD_DLL "ALCA_BUILD_DEBUG=$<CONFIG:Debug>")
+target_link_libraries(alca-shared ${ALCA_LINK_LIBRARIES})
 
 ## alca cli
 add_executable(alca cli/alca.cpp
         cli/conn.cpp
-        cli/conn.hpp)
-target_include_directories(alca PRIVATE ${LIB_CLI11_INCLUDES})
+        cli/conn.hpp
+        cli/modules/file.cpp
+        cli/modules/modules.hpp
+        cli/modules/utils.cpp
+)
+target_include_directories(alca PRIVATE ${ALCA_CLI_INCLUDES})
+target_link_libraries(alca PRIVATE alca-static flatbuffers)
 if(WIN32)
-    target_link_libraries(alca PRIVATE alca-static wsock32 ws2_32 "-static")
-else()
-    target_link_libraries(alca PRIVATE alca-static)
+    target_link_libraries(alca PRIVATE wsock32 ws2_32 "-static")
 endif()
 
 # Tests

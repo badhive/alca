@@ -30,7 +30,7 @@
 #define VM_ACCUM_MAX 4
 #define VM_MAX_CALLBACKS 10
 
-#if(ALCA_BUILD_DEBUG == 1)
+#if(ALCA_TEST == 1)
 #define DBGPRINT(...) vm_debug_print(__VA_ARGS__)
 #else
 #define DBGPRINT(...)
@@ -39,7 +39,7 @@
 #define push(x) {\
     if (vm->sp >= VM_STACK_MAX) \
     { \
-        *result = ERROR_STACK_OVERFLOW; \
+        *result = AC_ERROR_STACK_OVERFLOW; \
         stop = TRUE; \
         break; \
     } \
@@ -279,15 +279,15 @@ int ac_vm_get_trigger_count(ac_vm *vm)
 }
 
 /*
-+----------+
-| version  | module version
-+----------+
-| etypelen | event type length
-+----------+
-| typename | event type
-+----------+
-| evntdata | event data
-+----------+
++------------+
+| version :4 | module version
++------------+
+| etypelen:4 | event type length
++------------+
+| typename:? | event type
++------------+
+| evntdata:? | event data
++------------+
 */
 
 // executes all rules with matching event type or event type 0 (none)
@@ -295,24 +295,28 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize, void *exec_
 {
     vm->ntriggers = 0; // reset trigger count
     char *event_type = NULL;
-    ac_error err = ERROR_SUCCESS;
+    ac_error err = AC_ERROR_SUCCESS;
 
     // get event version, name and data
     if (esize < 8)
-        return ERROR_BAD_DATA;
-    uint32_t etypever = b2l(*(uint32_t *)event);
-    uint32_t etypelen = b2l(*(uint32_t *)(event + sizeof(uint32_t)));
-    if (esize + 4 < etypelen)
-        return ERROR_BAD_DATA;
+        return AC_ERROR_BAD_DATA;
+    uint32_t etypever = netint(*(uint32_t *)event);
+    uint32_t etypelen = netint(*(uint32_t *)(event + sizeof(uint32_t)));
+
+    if (esize - 8 < etypelen)
+        return AC_ERROR_BAD_DATA;
+
     event_type = (char *) event + (2 * sizeof(uint32_t));
 
     ac_context_object *mod = ac_context_get(vm->cpl->ctx, event_type);
     if (!mod)
-        return ERROR_MODULE; // unknown module name
+        return AC_ERROR_MODULE; // unknown module name
+
     if (ac_context_object_get_module_version(mod) != etypever)
-        return ERROR_MODULE_VERSION; // version mismatch
+        return AC_ERROR_MODULE_VERSION; // version mismatch
+
     if (!ac_context_object_unmarshal_evtdata(mod, (unsigned char *) event_type + etypelen))
-        return ERROR_BAD_DATA;
+        return AC_ERROR_BAD_DATA;
 
     for (int i = 0; i < vm->cpl->nrules; i++)
     {
@@ -326,7 +330,7 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize, void *exec_
                 uint32_t result = 0;
                 vm->current_rule = ac_arena_get_string(vm->data, entry->name_offset);
                 ac_error e = ac_vm_exec_code(vm, vm->code + entry->code_offset, &result);
-                if (e != ERROR_SUCCESS)
+                if (e != AC_ERROR_SUCCESS)
                 {
                     printf("[acvm] Rule %s: caught exception: code = %d\n", vm->current_rule, e);
                     err = e;
@@ -368,7 +372,7 @@ void ac_vm_free(ac_vm *vm)
 ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
 {
     int stop = FALSE;
-    ac_error err = ERROR_SUCCESS;
+    ac_error err = AC_ERROR_SUCCESS;
 
     // registers
     ac_object r1;
@@ -382,7 +386,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
     {
         if (vm->callstack[i] == (long long)vm->ip)
         {
-            err = ERROR_RECURSION;
+            err = AC_ERROR_RECURSION;
             printf("[acvm] Rule %s: caught exception: code = %d\n", vm->current_rule, err);
             stop = TRUE;
             break;
@@ -453,7 +457,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 DBGPRINT("SHL: %d << %d", r2.i, r1.i);
                 if (r1.i > 32)
                 {
-                    err = ERROR_BAD_OPERAND;
+                    err = AC_ERROR_BAD_OPERAND;
                     stop = TRUE;
                 }
                 else
@@ -470,7 +474,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 DBGPRINT("SHR: %d >> %d", r2.i, r1.i);
                 if (r1.i > 32)
                 {
-                    err = ERROR_BAD_OPERAND;
+                    err = AC_ERROR_BAD_OPERAND;
                     stop = TRUE;
                 }
                 else
@@ -701,7 +705,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 ac_context_object *module = ac_context_get(vm->cpl->ctx, r2.s);
                 if (module == NULL)
                 {
-                    err = ERROR_MODULE;
+                    err = AC_ERROR_MODULE;
                     stop = TRUE;
                     break;
                 }
@@ -858,7 +862,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 unsigned char *ret = vm->ip;
                 err = ac_vm_exec_code(vm, vm->code + e.code_offset, &r2.b);
                 vm->ip = ret;
-                if (err != ERROR_SUCCESS)
+                if (err != AC_ERROR_SUCCESS)
                 {
                     stop = TRUE;
                     break;
@@ -879,7 +883,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 ac_object tmp = {0};
                 err = fn(r1.o, args, &tmp);
                 ac_free(args);
-                if (err != ERROR_SUCCESS)
+                if (err != AC_ERROR_SUCCESS)
                 {
                     stop = TRUE;
                     break;
@@ -908,7 +912,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 r2.b = ac_context_object_get_array_item(r2.o, r1.i, &r1);
                 if (!r2.b)
                 {
-                    err = ERROR_INDEX;
+                    err = AC_ERROR_INDEX;
                     stop = TRUE;
                     break;
                 }
@@ -939,12 +943,12 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
             break;
             default:
             {
-                err = ERROR_OPERATION;
+                err = AC_ERROR_OPERATION;
                 stop = TRUE;
             }
         }
     }
-    if (err != ERROR_SUCCESS)
+    if (err != AC_ERROR_SUCCESS)
         *result = FALSE;
     return err;
 }

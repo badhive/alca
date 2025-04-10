@@ -27,7 +27,7 @@
 #include <alca/lexer.h>
 #include <alca/parser.h>
 #include <alca/bytecode.h>
-
+#include <alca/defaults.h>
 #include <alca/compiler.h>
 
 /*
@@ -112,6 +112,14 @@ remaining on the stack, which would be the boolean result of the operation.
 #define ALCA_RULE_ENTRY_SIZE (4 * 6)
 #define ALCA_SEQUENCE_ENTRY_HEADER_SIZE (4 * 5)
 
+#define AC_DEFAULT_MODULE(module_name) \
+&(ac_module_table_entry){ \
+.name = #module_name, \
+.load_callback = ac_default_##module_name##_load_callback, \
+.unload_callback = ac_default_##module_name##_unload_callback, \
+.unmarshal_callback = ac_default_##module_name##_unmarshal_callback \
+} \
+
 ac_compiler *ac_compiler_new()
 {
     ac_compiler *compiler = ac_alloc(sizeof(ac_compiler));
@@ -123,6 +131,8 @@ ac_compiler *ac_compiler_new()
     compiler->builder->code = compiler->code_arena;
     compiler->builder->data = compiler->data_arena;
     compiler->builder->ctx = compiler->ctx;
+
+    ac_compiler_include_module(compiler, AC_DEFAULT_MODULE(file));
     return compiler;
 }
 
@@ -202,7 +212,7 @@ int compiler_find_module_ordinal(ac_compiler *compiler, char *module_name, uint3
     if (!module_name)
     {
         *ordinal = 0;
-        return ERROR_SUCCESS;
+        return AC_ERROR_SUCCESS;
     }
     ac_module_entry *entry = NULL;
     for (int i = 0; i < compiler->nmodules; i++)
@@ -214,10 +224,10 @@ int compiler_find_module_ordinal(ac_compiler *compiler, char *module_name, uint3
         if (strncmp(name, module_name, entry->lname) == 0)
         {
             *ordinal = entry->ordinal;
-            return ERROR_SUCCESS;
+            return AC_ERROR_SUCCESS;
         }
     }
-    return ERROR_UNSUCCESSFUL;
+    return AC_ERROR_UNSUCCESSFUL;
 }
 
 uint32_t compiler_add_rule_entry(ac_compiler *compiler, ac_rule_entry *entry)
@@ -269,14 +279,14 @@ void compiler_add_ast(ac_compiler *compiler, ac_ast *ast, int src_idx)
 ac_error ac_compiler_add_file(ac_compiler *compiler, const char *filename)
 {
     char *buffer = NULL;
-    ac_error status = ERROR_SUCCESS;
+    ac_error status = AC_ERROR_SUCCESS;
     uint32_t file_size = 0;
     ac_lexer *lexer;
     if (compiler->locked)
-        return ERROR_COMPILER_LOCKED;
+        return AC_ERROR_COMPILER_LOCKED;
     if (compiler->done)
-        return ERROR_COMPILER_DONE;
-    if ((status = ac_read_file(filename, &buffer, &file_size)) != ERROR_SUCCESS)
+        return AC_ERROR_COMPILER_DONE;
+    if ((status = ac_read_file(filename, &buffer, &file_size)) != AC_ERROR_SUCCESS)
         return status;
     lexer = ac_lex_new(buffer, filename, file_size);
     ac_lex_set_silence_warnings(lexer, compiler->silence_warnings);
@@ -284,16 +294,16 @@ ac_error ac_compiler_add_file(ac_compiler *compiler, const char *filename)
     {
         compiler_add_error(compiler, lexer->status, lexer->error_msg);
         ac_lex_free(lexer);
-        return ERROR_UNSUCCESSFUL;
+        return AC_ERROR_UNSUCCESSFUL;
     }
     compiler_add_source_lexer(compiler, lexer);
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 ac_error ac_compiler_build_ast(ac_compiler *compiler)
 {
     if (compiler->locked)
-        return ERROR_COMPILER_LOCKED;
+        return AC_ERROR_COMPILER_LOCKED;
     ac_ast **asts = ac_alloc(compiler->nsources * sizeof(ac_ast *));
     ac_lexer *lexer = NULL;
     ac_parser *parser = NULL;
@@ -303,12 +313,12 @@ ac_error ac_compiler_build_ast(ac_compiler *compiler)
         lexer = compiler->sources[i];
         parser = ac_psr_new(lexer);
         ast = ac_psr_parse(parser);
-        if (parser->error.code != ERROR_SUCCESS)
+        if (parser->error.code != AC_ERROR_SUCCESS)
         {
             compiler_add_error(compiler, parser->error.code, parser->error.message);
             ac_psr_free(parser);
             ac_free(asts);
-            return ERROR_UNSUCCESSFUL;
+            return AC_ERROR_UNSUCCESSFUL;
         }
         ac_psr_free(parser);
         asts[i] = ast;
@@ -317,33 +327,33 @@ ac_error ac_compiler_build_ast(ac_compiler *compiler)
         compiler_add_ast(compiler, asts[i], i);
     ac_free(asts);
     compiler->locked = TRUE;
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 // called for every default module before compiling
-void ac_compiler_include_module(ac_compiler *compiler, const char *module_name, ac_module_load_callback callback)
+void ac_compiler_include_module(ac_compiler *compiler, ac_module_table_entry *module)
 {
     if (compiler->locked || compiler->done)
         return;
-    ac_context_add_module_load_callback(compiler->ctx, module_name, callback);
+    ac_context_add_module(compiler->ctx, module);
 }
 
 ac_error ac_compiler_check_ast(ac_compiler *compiler)
 {
     if (!compiler->asts)
-        return ERROR_NOT_PARSED;
+        return AC_ERROR_NOT_PARSED;
     if (compiler->done)
-        return ERROR_COMPILER_DONE;
-    ac_error ret = ERROR_SUCCESS;
+        return AC_ERROR_COMPILER_DONE;
+    ac_error ret = AC_ERROR_SUCCESS;
     if (!compiler->ctx)
         compiler->ctx = ac_context_new();
     for (int i = 0; i < compiler->nsources; i++)
     {
         ac_ast *ast = compiler->asts[i];
         ac_checker *checker = ac_checker_new(ast, compiler->ctx);
-        ret = ac_checker_check(checker) ? ERROR_SUCCESS : ERROR_UNSUCCESSFUL;
+        ret = ac_checker_check(checker) ? AC_ERROR_SUCCESS : AC_ERROR_UNSUCCESSFUL;
         int line = 0;
-        ac_error code = ERROR_SUCCESS;
+        ac_error code = AC_ERROR_SUCCESS;
         char *err = NULL;
         while (ac_checker_iter_errors(checker, &line, &code, &err))
         {
@@ -364,20 +374,24 @@ ac_error compiler_compile_import(ac_compiler *compiler, ac_statement *import)
     {
         uint32_t lname = strlen(name);
         uint32_t offset = ac_arena_add_string(compiler->data_arena, name, lname);
-        ac_module_load_callback cb = NULL;
-        if (!ac_context_get_module(compiler->ctx, name, &cb))
-            return ERROR_MODULE;
-        uint32_t version = ac_context_object_get_module_version(cb());
+        ac_module_table_entry module = {0};
+        if (!ac_context_get_module(compiler->ctx, name, &module))
+            return AC_ERROR_MODULE;
+
+        ac_module *module_object = module.load_callback();
+        uint32_t version = ac_context_object_get_module_version(module_object);
+        module.unload_callback(module_object);
+
         uint32_t ordinal = compiler->nmodules + 1; // starts from 1
         ac_module_entry module_entry = {ordinal, version, lname, offset};
         compiler_add_module_entry(compiler, &module_entry);
     }
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 ac_error compiler_compile_rule(ac_compiler *compiler, ac_statement *rule, int seq_rule, uint32_t *idx)
 {
-    ac_error status = ERROR_SUCCESS;
+    ac_error status = AC_ERROR_SUCCESS;
     uint32_t flags = 0;
     uint32_t lname = 0;
     uint32_t offset = 0;
@@ -394,16 +408,16 @@ ac_error compiler_compile_rule(ac_compiler *compiler, ac_statement *rule, int se
         flags |= AC_SEQUENCE_RULE;
     if (rule->u.rule.event)
     {
-        if (compiler_find_module_ordinal(compiler, rule->u.rule.event->value, &ordinal) != ERROR_SUCCESS)
-            return ERROR_UNSUCCESSFUL;
+        if (compiler_find_module_ordinal(compiler, rule->u.rule.event->value, &ordinal) != AC_ERROR_SUCCESS)
+            return AC_ERROR_UNSUCCESSFUL;
     }
-    if ((status = ac_bytecode_emit_rule(compiler->builder, rule)) != ERROR_SUCCESS)
+    if ((status = ac_bytecode_emit_rule(compiler->builder, rule)) != AC_ERROR_SUCCESS)
         return status;
     ac_rule_entry rule_entry = {flags, code_start, ordinal, lname, offset};
     uint32_t entry = compiler_add_rule_entry(compiler, &rule_entry);
     if (idx)
         *idx = entry;
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 ac_error compiler_compile_sequence(ac_compiler *compiler, ac_statement *sequence)
@@ -424,19 +438,19 @@ ac_error compiler_compile_sequence(ac_compiler *compiler, ac_statement *sequence
             if (idx == -1)
             {
                 ac_free(indices);
-                return ERROR_UNSUCCESSFUL;
+                return AC_ERROR_UNSUCCESSFUL;
             }
             indices[i] = (uint32_t)idx;
         } else
         {
             ac_error err = compiler_compile_rule(compiler, sequence->u.sequence.rules[i], TRUE, &indices[i]);
-            if (err != ERROR_SUCCESS)
+            if (err != AC_ERROR_SUCCESS)
                 return err;
         }
     }
     ac_sequence_entry entry = {flags, max_span, rule_count, lname, offset, indices};
     compiler_add_sequence_entry(compiler, &entry);
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 ac_error compiler_export(ac_compiler *compiler, const char *out)
@@ -501,23 +515,23 @@ ac_error compiler_export(ac_compiler *compiler, const char *out)
 
     FILE *outfile = fopen(out, "wb");
     if (outfile == NULL)
-        return ERROR_COMPILER_EXPORT;
+        return AC_ERROR_COMPILER_EXPORT;
     size_t written = fwrite(ac_arena_data(file), 1, ac_arena_size(file), outfile);
     fclose(outfile);
     if (written != ac_arena_size(file))
     {
-        return ERROR_COMPILER_EXPORT;
+        return AC_ERROR_COMPILER_EXPORT;
     }
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 ac_error compiler_compile_statements(ac_compiler *compiler)
 {
     // top-level ast
     if (!compiler->asts)
-        return ERROR_NOT_PARSED;
+        return AC_ERROR_NOT_PARSED;
     if (compiler->done)
-        return ERROR_COMPILER_DONE;
+        return AC_ERROR_COMPILER_DONE;
     // it's done once this func has been called. might as well create a new compiler if
     // theres anything else left to compile
     compiler->done = TRUE;
@@ -534,7 +548,7 @@ ac_error compiler_compile_statements(ac_compiler *compiler)
     for (int i = 0; i < ast->stmt_count; i++)
     {
         ac_statement *stmt = ast->statements[i];
-        ac_error code = ERROR_SUCCESS;
+        ac_error code = AC_ERROR_SUCCESS;
         switch (stmt->type)
         {
             case STMT_IMPORT: code = compiler_compile_import(compiler, stmt);
@@ -544,35 +558,35 @@ ac_error compiler_compile_statements(ac_compiler *compiler)
             case STMT_SEQUENCE: code = compiler_compile_sequence(compiler, stmt);
                 break;
         }
-        if (code != ERROR_SUCCESS)
+        if (code != AC_ERROR_SUCCESS)
             return code;
     }
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 ac_error ac_compiler_compile(ac_compiler *compiler, const char *out)
 {
     if (compiler->done)
-        return ERROR_COMPILER_DONE;
+        return AC_ERROR_COMPILER_DONE;
     if (compiler->nsources == 0)
-        return ERROR_COMPILER_NO_SOURCE;
+        return AC_ERROR_COMPILER_NO_SOURCE;
     ac_error err;
     err = ac_compiler_build_ast(compiler);
-    if (err != ERROR_SUCCESS)
+    if (err != AC_ERROR_SUCCESS)
         return err;
     err = ac_compiler_check_ast(compiler);
-    if (err != ERROR_SUCCESS)
+    if (err != AC_ERROR_SUCCESS)
         return err;
     err = compiler_compile_statements(compiler);
-    if (err != ERROR_SUCCESS)
+    if (err != AC_ERROR_SUCCESS)
         return err;
     if (out)
     {
         err = compiler_export(compiler, out);
-        if (err != ERROR_SUCCESS)
+        if (err != AC_ERROR_SUCCESS)
             return err;
     }
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }
 
 void *__ac_compiler_get_code(ac_compiler *compiler)

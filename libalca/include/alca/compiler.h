@@ -93,7 +93,7 @@ struct ac_compiler
     int silence_warnings;
 };
 
-AC_API void ac_compiler_include_module(ac_compiler *compiler, const char *module_name, ac_module_load_callback callback);
+AC_API void ac_compiler_include_module(ac_compiler *compiler, ac_module_table_entry *module);
 
 AC_API ac_error ac_compiler_add_file(ac_compiler *compiler, const char *filename);
 
@@ -101,7 +101,13 @@ AC_API ac_error ac_compiler_build_ast(ac_compiler *compiler);
 
 AC_API ac_error ac_compiler_check_ast(ac_compiler *compiler);
 
-AC_API ac_error ac_compiler_compile(ac_compiler *compiler, const char *out);
+/** Compiles rules
+ *
+ * @param compiler compiler object
+ * @param out optional: if not NULL, write exported rules to this parameter
+ * @return AC_ERROR_SUCCESS if successful
+ */
+ac_error ac_compiler_compile(ac_compiler *compiler, const char *out);
 
 AC_API void ac_compiler_free(ac_compiler *compiler);
 
@@ -112,8 +118,6 @@ void *__ac_compiler_get_data(ac_compiler *compiler);
 int __ac_compiler_find_rule_idx_by_name(ac_compiler *compiler, char *name);
 
 AC_API ac_compiler *ac_compiler_new();
-
-AC_API void ac_compiler_free(ac_compiler *compiler);
 
 AC_API void ac_compiler_set_silence_warnings(ac_compiler *compiler, int silence_warnings);
 

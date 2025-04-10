@@ -14,33 +14,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef AC_CONN_H
-#define AC_CONN_H
+#ifndef AC_DEFAULTS_H
+#define AC_DEFAULTS_H
 
-#ifdef _WIN32
-#ifndef _WIN32_WINNT // NOLINT(*-reserved-identifier)
-#define _WIN32_WINNT 0x0501  /* Windows XP. */
-#endif
-#include <winsock2.h>
-#else
-typedef int SOCKET;
-#define INVALID_SOCKET (~0)
-#define SOCKET_ERROR -1
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h> // close()
-#include <netdb.h>  // getaddrinfo(), freeaddrinfo()
-#endif
-#include <cstdint>
+#include <alca/module.h>
 
-int conn_api_init();
+// file module
+ac_module *ac_default_file_load_callback();
+void ac_default_file_unload_callback(const ac_module *module);
+int ac_default_file_unmarshal_callback(ac_module *module, const unsigned char *event_data);
 
-int conn_api_shutdown();
-
-SOCKET conn_connect(const char *address, uint16_t port);
-
-void conn_close(SOCKET conn);
-
-int conn_last_error();
-
-#endif //AC_CONN_H
+#endif //AC_DEFAULTS_H

@@ -20,8 +20,6 @@
 #include <alca/utils.h>
 #include <alca/context.h>
 
-typedef int (*ac_module_event_unmarshaller)(ac_module *module, const unsigned char *edata);
-
 typedef void (*ac_module_freer)(ac_module *module);
 
 /** Adds a global enum value to the specified module - accessible by 'module_name.value'
@@ -62,14 +60,6 @@ AC_API ac_module *ac_module_add_field(ac_module *parent, const char *field_name,
  */
 AC_API ac_module *ac_module_get_field(ac_module *parent, const char *field_name);
 
-/** Set the function that unmarshals event data received from this module's corresponding sensor.
- * This function is responsible
- *
- * @param module top-level module object (from ac_module_create)
- * @param unmarshal unmarshal function that receives event data
- */
-AC_API void ac_module_set_unmarshaller(ac_module *module, ac_module_event_unmarshaller unmarshal);
-
 /** Appends an object to a module field of type array.
  *
  * @param field field object
@@ -93,7 +83,7 @@ AC_API void ac_module_set_uint32_field(ac_module *parent, const char *field_name
  * @param field_name name of field
  * @param value string value
  */
-AC_API void ac_module_set_string_field(ac_module *parent, const char *field_name, char *value);
+AC_API void ac_module_set_string_field(ac_module *parent, const char *field_name, const char *value);
 
 /** (Call from unmarshal) assigns a boolean value to a module field.
  *
