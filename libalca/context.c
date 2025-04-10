@@ -34,6 +34,7 @@ struct ac_context
 
 struct ac_context_object
 {
+    int is_const;
     const char *name;
     uint32_t version;
     ac_context_object *parent;
@@ -227,7 +228,8 @@ ac_context_object *ac_context_object_add_field(
     field->field_type = type;
     field->fields = hashmap_new(sizeof(ac_context_object), 0, 0, 0,
                                 context_object_hash, context_object_cmp, ac_context_object_free_internals, NULL);
-
+    if (type & AC_FIELD_TYPE_CONSTANT)
+        field->is_const = TRUE;
     hashmap_set(object->fields, field);
     ac_free(field);
     return (ac_context_object *) hashmap_get(object->fields, &(ac_context_object){.name = name});
@@ -237,6 +239,11 @@ void ac_context_object_set_data(ac_context_object *object, ac_object *value)
 {
     if (value)
         memcpy(&object->object, value, sizeof(ac_object));
+}
+
+void ac_context_object_set_const(ac_context_object *object, ac_object *value)
+{
+
 }
 
 void ac_context_object_get_data(ac_context_object *object, ac_object *value)
@@ -352,6 +359,8 @@ void ac_context_object_clear_module_data(ac_context_object *module)
     while (hashmap_iter(module->fields, &i, &f))
     {
         ac_context_object *o = f;
+        if (o->is_const)
+            continue; // don't clear const objects
         if (o->field_type == AC_FIELD_TYPE_STRING)
         {
             if (o->object.s) ac_free(o->object.s);

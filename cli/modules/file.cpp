@@ -25,9 +25,7 @@ using namespace Sensor;
 int file::unmarshal_callback(ac_module *module, const unsigned char *event_data)
 {
     const auto *event = flatbuffers::GetRoot<FileEvent>(event_data);
-
     ac_module_set_uint32_field(module, "action", event->action());
-
     utils::set_string_field(module, "name", event->name());
     utils::set_string_field(module, "path", event->path());
     utils::set_string_field(module, "directory", event->directory());

@@ -31,7 +31,7 @@ typedef void (*ac_module_freer)(ac_module *module);
     ac_module_add_field( \
     module, \
     #value, \
-    AC_FIELD_TYPE_INTEGER); \
+    AC_FIELD_TYPE_INTEGER | AC_FIELD_TYPE_CONSTANT); \
     ac_module_set_uint32_field(module, #value, value)
 
 /** Create a module object.

@@ -30,7 +30,7 @@
 #define VM_ACCUM_MAX 4
 #define VM_MAX_CALLBACKS 10
 
-#if(ALCA_TEST == 1)
+#if(ALCA_BUILD_DEBUG == 1)
 #define DBGPRINT(...) vm_debug_print(__VA_ARGS__)
 #else
 #define DBGPRINT(...)
@@ -327,15 +327,15 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize, void *exec_
             if (mi == NULL) continue;
             if (strncmp(mi->name, event_type, etypelen) == 0)
             {
-                uint32_t result = 0;
+                uint32_t triggered = 0;
                 vm->current_rule = ac_arena_get_string(vm->data, entry->name_offset);
-                ac_error e = ac_vm_exec_code(vm, vm->code + entry->code_offset, &result);
+                ac_error e = ac_vm_exec_code(vm, vm->code + entry->code_offset, &triggered);
                 if (e != AC_ERROR_SUCCESS)
                 {
                     printf("[acvm] Rule %s: caught exception: code = %d\n", vm->current_rule, e);
                     err = e;
                 }
-                if (result)
+                if (triggered)
                 {
                     time_t at = time(NULL);
                     // report rule has been triggered only if it is not anonymous or private
