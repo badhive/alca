@@ -15,15 +15,6 @@ static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
 
 namespace Sensor {
 
-struct FileSection;
-struct FileSectionBuilder;
-
-struct FileImport;
-struct FileImportBuilder;
-
-struct WinPE;
-struct WinPEBuilder;
-
 struct FileEvent;
 struct FileEventBuilder;
 
@@ -243,240 +234,6 @@ inline const char *EnumNameRegistryValueType(RegistryValueType e) {
   return EnumNamesRegistryValueType()[index];
 }
 
-struct FileSection FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
-  typedef FileSectionBuilder Builder;
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_NAME = 4,
-    VT_SIZE = 6,
-    VT_ENTROPY = 8
-  };
-  const ::flatbuffers::String *name() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
-  }
-  int32_t size() const {
-    return GetField<int32_t>(VT_SIZE, 0);
-  }
-  int64_t entropy() const {
-    return GetField<int64_t>(VT_ENTROPY, 0);
-  }
-  bool Verify(::flatbuffers::Verifier &verifier) const {
-    return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_NAME) &&
-           verifier.VerifyString(name()) &&
-           VerifyField<int32_t>(verifier, VT_SIZE, 4) &&
-           VerifyField<int64_t>(verifier, VT_ENTROPY, 8) &&
-           verifier.EndTable();
-  }
-};
-
-struct FileSectionBuilder {
-  typedef FileSection Table;
-  ::flatbuffers::FlatBufferBuilder &fbb_;
-  ::flatbuffers::uoffset_t start_;
-  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
-    fbb_.AddOffset(FileSection::VT_NAME, name);
-  }
-  void add_size(int32_t size) {
-    fbb_.AddElement<int32_t>(FileSection::VT_SIZE, size, 0);
-  }
-  void add_entropy(int64_t entropy) {
-    fbb_.AddElement<int64_t>(FileSection::VT_ENTROPY, entropy, 0);
-  }
-  explicit FileSectionBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
-        : fbb_(_fbb) {
-    start_ = fbb_.StartTable();
-  }
-  ::flatbuffers::Offset<FileSection> Finish() {
-    const auto end = fbb_.EndTable(start_);
-    auto o = ::flatbuffers::Offset<FileSection>(end);
-    return o;
-  }
-};
-
-inline ::flatbuffers::Offset<FileSection> CreateFileSection(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::String> name = 0,
-    int32_t size = 0,
-    int64_t entropy = 0) {
-  FileSectionBuilder builder_(_fbb);
-  builder_.add_entropy(entropy);
-  builder_.add_size(size);
-  builder_.add_name(name);
-  return builder_.Finish();
-}
-
-inline ::flatbuffers::Offset<FileSection> CreateFileSectionDirect(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    const char *name = nullptr,
-    int32_t size = 0,
-    int64_t entropy = 0) {
-  auto name__ = name ? _fbb.CreateString(name) : 0;
-  return Sensor::CreateFileSection(
-      _fbb,
-      name__,
-      size,
-      entropy);
-}
-
-struct FileImport FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
-  typedef FileImportBuilder Builder;
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_NAME = 4,
-    VT_FUNCTIONS = 6
-  };
-  const ::flatbuffers::String *name() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
-  }
-  const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *functions() const {
-    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_FUNCTIONS);
-  }
-  bool Verify(::flatbuffers::Verifier &verifier) const {
-    return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_NAME) &&
-           verifier.VerifyString(name()) &&
-           VerifyOffset(verifier, VT_FUNCTIONS) &&
-           verifier.VerifyVector(functions()) &&
-           verifier.VerifyVectorOfStrings(functions()) &&
-           verifier.EndTable();
-  }
-};
-
-struct FileImportBuilder {
-  typedef FileImport Table;
-  ::flatbuffers::FlatBufferBuilder &fbb_;
-  ::flatbuffers::uoffset_t start_;
-  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
-    fbb_.AddOffset(FileImport::VT_NAME, name);
-  }
-  void add_functions(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> functions) {
-    fbb_.AddOffset(FileImport::VT_FUNCTIONS, functions);
-  }
-  explicit FileImportBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
-        : fbb_(_fbb) {
-    start_ = fbb_.StartTable();
-  }
-  ::flatbuffers::Offset<FileImport> Finish() {
-    const auto end = fbb_.EndTable(start_);
-    auto o = ::flatbuffers::Offset<FileImport>(end);
-    return o;
-  }
-};
-
-inline ::flatbuffers::Offset<FileImport> CreateFileImport(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::String> name = 0,
-    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> functions = 0) {
-  FileImportBuilder builder_(_fbb);
-  builder_.add_functions(functions);
-  builder_.add_name(name);
-  return builder_.Finish();
-}
-
-inline ::flatbuffers::Offset<FileImport> CreateFileImportDirect(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    const char *name = nullptr,
-    const std::vector<::flatbuffers::Offset<::flatbuffers::String>> *functions = nullptr) {
-  auto name__ = name ? _fbb.CreateString(name) : 0;
-  auto functions__ = functions ? _fbb.CreateVector<::flatbuffers::Offset<::flatbuffers::String>>(*functions) : 0;
-  return Sensor::CreateFileImport(
-      _fbb,
-      name__,
-      functions__);
-}
-
-struct WinPE FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
-  typedef WinPEBuilder Builder;
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_ARCH = 4,
-    VT_IS_DOTNET = 6,
-    VT_SECTIONS = 8,
-    VT_IMPORTS = 10
-  };
-  const ::flatbuffers::String *arch() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_ARCH);
-  }
-  bool is_dotnet() const {
-    return GetField<uint8_t>(VT_IS_DOTNET, 0) != 0;
-  }
-  const ::flatbuffers::Vector<::flatbuffers::Offset<Sensor::FileSection>> *sections() const {
-    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<Sensor::FileSection>> *>(VT_SECTIONS);
-  }
-  const ::flatbuffers::Vector<::flatbuffers::Offset<Sensor::FileImport>> *imports() const {
-    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<Sensor::FileImport>> *>(VT_IMPORTS);
-  }
-  bool Verify(::flatbuffers::Verifier &verifier) const {
-    return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_ARCH) &&
-           verifier.VerifyString(arch()) &&
-           VerifyField<uint8_t>(verifier, VT_IS_DOTNET, 1) &&
-           VerifyOffset(verifier, VT_SECTIONS) &&
-           verifier.VerifyVector(sections()) &&
-           verifier.VerifyVectorOfTables(sections()) &&
-           VerifyOffset(verifier, VT_IMPORTS) &&
-           verifier.VerifyVector(imports()) &&
-           verifier.VerifyVectorOfTables(imports()) &&
-           verifier.EndTable();
-  }
-};
-
-struct WinPEBuilder {
-  typedef WinPE Table;
-  ::flatbuffers::FlatBufferBuilder &fbb_;
-  ::flatbuffers::uoffset_t start_;
-  void add_arch(::flatbuffers::Offset<::flatbuffers::String> arch) {
-    fbb_.AddOffset(WinPE::VT_ARCH, arch);
-  }
-  void add_is_dotnet(bool is_dotnet) {
-    fbb_.AddElement<uint8_t>(WinPE::VT_IS_DOTNET, static_cast<uint8_t>(is_dotnet), 0);
-  }
-  void add_sections(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Sensor::FileSection>>> sections) {
-    fbb_.AddOffset(WinPE::VT_SECTIONS, sections);
-  }
-  void add_imports(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Sensor::FileImport>>> imports) {
-    fbb_.AddOffset(WinPE::VT_IMPORTS, imports);
-  }
-  explicit WinPEBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
-        : fbb_(_fbb) {
-    start_ = fbb_.StartTable();
-  }
-  ::flatbuffers::Offset<WinPE> Finish() {
-    const auto end = fbb_.EndTable(start_);
-    auto o = ::flatbuffers::Offset<WinPE>(end);
-    return o;
-  }
-};
-
-inline ::flatbuffers::Offset<WinPE> CreateWinPE(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::String> arch = 0,
-    bool is_dotnet = false,
-    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Sensor::FileSection>>> sections = 0,
-    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Sensor::FileImport>>> imports = 0) {
-  WinPEBuilder builder_(_fbb);
-  builder_.add_imports(imports);
-  builder_.add_sections(sections);
-  builder_.add_arch(arch);
-  builder_.add_is_dotnet(is_dotnet);
-  return builder_.Finish();
-}
-
-inline ::flatbuffers::Offset<WinPE> CreateWinPEDirect(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    const char *arch = nullptr,
-    bool is_dotnet = false,
-    const std::vector<::flatbuffers::Offset<Sensor::FileSection>> *sections = nullptr,
-    const std::vector<::flatbuffers::Offset<Sensor::FileImport>> *imports = nullptr) {
-  auto arch__ = arch ? _fbb.CreateString(arch) : 0;
-  auto sections__ = sections ? _fbb.CreateVector<::flatbuffers::Offset<Sensor::FileSection>>(*sections) : 0;
-  auto imports__ = imports ? _fbb.CreateVector<::flatbuffers::Offset<Sensor::FileImport>>(*imports) : 0;
-  return Sensor::CreateWinPE(
-      _fbb,
-      arch__,
-      is_dotnet,
-      sections__,
-      imports__);
-}
-
 struct FileEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef FileEventBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
@@ -485,13 +242,8 @@ struct FileEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_PATH = 8,
     VT_DIRECTORY = 10,
     VT_EXTENSION = 12,
-    VT_OWNER = 14,
-    VT_SIZE = 16,
-    VT_MODE = 18,
-    VT_CREATED_AT = 20,
-    VT_MODIFIED_AT = 22,
-    VT_PE = 24,
-    VT_NEW_NAME = 26
+    VT_NEW_NAME = 14,
+    VT_IS_DIRECTORY = 16
   };
   Sensor::FileAction action() const {
     return static_cast<Sensor::FileAction>(GetField<int8_t>(VT_ACTION, 0));
@@ -508,26 +260,11 @@ struct FileEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ::flatbuffers::String *extension() const {
     return GetPointer<const ::flatbuffers::String *>(VT_EXTENSION);
   }
-  const ::flatbuffers::String *owner() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_OWNER);
-  }
-  int64_t size() const {
-    return GetField<int64_t>(VT_SIZE, 0);
-  }
-  int16_t mode() const {
-    return GetField<int16_t>(VT_MODE, 0);
-  }
-  int64_t created_at() const {
-    return GetField<int64_t>(VT_CREATED_AT, 0);
-  }
-  int64_t modified_at() const {
-    return GetField<int64_t>(VT_MODIFIED_AT, 0);
-  }
-  const Sensor::WinPE *pe() const {
-    return GetPointer<const Sensor::WinPE *>(VT_PE);
-  }
   const ::flatbuffers::String *new_name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NEW_NAME);
+  }
+  bool is_directory() const {
+    return GetField<uint8_t>(VT_IS_DIRECTORY, 0) != 0;
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -540,16 +277,9 @@ struct FileEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            verifier.VerifyString(directory()) &&
            VerifyOffset(verifier, VT_EXTENSION) &&
            verifier.VerifyString(extension()) &&
-           VerifyOffset(verifier, VT_OWNER) &&
-           verifier.VerifyString(owner()) &&
-           VerifyField<int64_t>(verifier, VT_SIZE, 8) &&
-           VerifyField<int16_t>(verifier, VT_MODE, 2) &&
-           VerifyField<int64_t>(verifier, VT_CREATED_AT, 8) &&
-           VerifyField<int64_t>(verifier, VT_MODIFIED_AT, 8) &&
-           VerifyOffset(verifier, VT_PE) &&
-           verifier.VerifyTable(pe()) &&
            VerifyOffset(verifier, VT_NEW_NAME) &&
            verifier.VerifyString(new_name()) &&
+           VerifyField<uint8_t>(verifier, VT_IS_DIRECTORY, 1) &&
            verifier.EndTable();
   }
 };
@@ -573,26 +303,11 @@ struct FileEventBuilder {
   void add_extension(::flatbuffers::Offset<::flatbuffers::String> extension) {
     fbb_.AddOffset(FileEvent::VT_EXTENSION, extension);
   }
-  void add_owner(::flatbuffers::Offset<::flatbuffers::String> owner) {
-    fbb_.AddOffset(FileEvent::VT_OWNER, owner);
-  }
-  void add_size(int64_t size) {
-    fbb_.AddElement<int64_t>(FileEvent::VT_SIZE, size, 0);
-  }
-  void add_mode(int16_t mode) {
-    fbb_.AddElement<int16_t>(FileEvent::VT_MODE, mode, 0);
-  }
-  void add_created_at(int64_t created_at) {
-    fbb_.AddElement<int64_t>(FileEvent::VT_CREATED_AT, created_at, 0);
-  }
-  void add_modified_at(int64_t modified_at) {
-    fbb_.AddElement<int64_t>(FileEvent::VT_MODIFIED_AT, modified_at, 0);
-  }
-  void add_pe(::flatbuffers::Offset<Sensor::WinPE> pe) {
-    fbb_.AddOffset(FileEvent::VT_PE, pe);
-  }
   void add_new_name(::flatbuffers::Offset<::flatbuffers::String> new_name) {
     fbb_.AddOffset(FileEvent::VT_NEW_NAME, new_name);
+  }
+  void add_is_directory(bool is_directory) {
+    fbb_.AddElement<uint8_t>(FileEvent::VT_IS_DIRECTORY, static_cast<uint8_t>(is_directory), 0);
   }
   explicit FileEventBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -612,25 +327,15 @@ inline ::flatbuffers::Offset<FileEvent> CreateFileEvent(
     ::flatbuffers::Offset<::flatbuffers::String> path = 0,
     ::flatbuffers::Offset<::flatbuffers::String> directory = 0,
     ::flatbuffers::Offset<::flatbuffers::String> extension = 0,
-    ::flatbuffers::Offset<::flatbuffers::String> owner = 0,
-    int64_t size = 0,
-    int16_t mode = 0,
-    int64_t created_at = 0,
-    int64_t modified_at = 0,
-    ::flatbuffers::Offset<Sensor::WinPE> pe = 0,
-    ::flatbuffers::Offset<::flatbuffers::String> new_name = 0) {
+    ::flatbuffers::Offset<::flatbuffers::String> new_name = 0,
+    bool is_directory = false) {
   FileEventBuilder builder_(_fbb);
-  builder_.add_modified_at(modified_at);
-  builder_.add_created_at(created_at);
-  builder_.add_size(size);
   builder_.add_new_name(new_name);
-  builder_.add_pe(pe);
-  builder_.add_owner(owner);
   builder_.add_extension(extension);
   builder_.add_directory(directory);
   builder_.add_path(path);
   builder_.add_name(name);
-  builder_.add_mode(mode);
+  builder_.add_is_directory(is_directory);
   builder_.add_action(action);
   return builder_.Finish();
 }
@@ -642,18 +347,12 @@ inline ::flatbuffers::Offset<FileEvent> CreateFileEventDirect(
     const char *path = nullptr,
     const char *directory = nullptr,
     const char *extension = nullptr,
-    const char *owner = nullptr,
-    int64_t size = 0,
-    int16_t mode = 0,
-    int64_t created_at = 0,
-    int64_t modified_at = 0,
-    ::flatbuffers::Offset<Sensor::WinPE> pe = 0,
-    const char *new_name = nullptr) {
+    const char *new_name = nullptr,
+    bool is_directory = false) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   auto path__ = path ? _fbb.CreateString(path) : 0;
   auto directory__ = directory ? _fbb.CreateString(directory) : 0;
   auto extension__ = extension ? _fbb.CreateString(extension) : 0;
-  auto owner__ = owner ? _fbb.CreateString(owner) : 0;
   auto new_name__ = new_name ? _fbb.CreateString(new_name) : 0;
   return Sensor::CreateFileEvent(
       _fbb,
@@ -662,13 +361,8 @@ inline ::flatbuffers::Offset<FileEvent> CreateFileEventDirect(
       path__,
       directory__,
       extension__,
-      owner__,
-      size,
-      mode,
-      created_at,
-      modified_at,
-      pe,
-      new_name__);
+      new_name__,
+      is_directory);
 }
 
 struct NetworkEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {

@@ -33,28 +33,6 @@ ac_module *ac_default_file_load_callback()
     ac_module_add_field(module, "path", AC_FIELD_TYPE_STRING);
     ac_module_add_field(module, "directory", AC_FIELD_TYPE_STRING);
     ac_module_add_field(module, "extension", AC_FIELD_TYPE_STRING);
-
-    ac_module_add_field(module, "owner", AC_FIELD_TYPE_STRING);
-    ac_module_add_field(module, "size", AC_FIELD_TYPE_INTEGER);
-    ac_module_add_field(module, "mode", AC_FIELD_TYPE_INTEGER);
-    ac_module_add_field(module, "created_at", AC_FIELD_TYPE_INTEGER);
-    ac_module_add_field(module, "modified_at", AC_FIELD_TYPE_INTEGER);
-
-    ac_module *pe = ac_module_add_field(module, "pe", AC_FIELD_TYPE_STRUCT);
-    ac_module_add_field(pe, "arch", AC_FIELD_TYPE_STRING);
-    ac_module_add_field(pe, "is_dotnet", AC_FIELD_TYPE_INTEGER);
-    ac_module_add_field(pe, "section_count", AC_FIELD_TYPE_INTEGER);
-    ac_module_add_field(pe, "import_count", AC_FIELD_TYPE_INTEGER);
-
-    ac_module *sections = ac_module_add_field(pe, "sections", AC_FIELD_TYPE_ARRAY | AC_FIELD_TYPE_STRUCT);
-    ac_module_add_field(sections, "name", AC_FIELD_TYPE_STRING);
-    ac_module_add_field(sections, "size", AC_FIELD_TYPE_INTEGER);
-    ac_module_add_field(sections, "entropy", AC_FIELD_TYPE_INTEGER);
-
-    ac_module *imports = ac_module_add_field(sections, "imports", AC_FIELD_TYPE_ARRAY | AC_FIELD_TYPE_STRUCT);
-    ac_module_add_field(imports, "name", AC_FIELD_TYPE_STRING);
-    ac_module_add_field(imports, "functions", AC_FIELD_TYPE_ARRAY | AC_FIELD_TYPE_STRING);
-
     ac_module_add_field(module, "new_name", AC_FIELD_TYPE_STRING);
 
     ac_module_add_enum(module, FILE_CREATE);

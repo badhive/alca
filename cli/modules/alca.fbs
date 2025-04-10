@@ -9,25 +9,6 @@ enum FileAction : byte {
     FileModify
 }
 
-table FileSection {
-    name:string;
-    size:int;
-    entropy:long;
-}
-
-table FileImport {
-    name:string;
-    functions:[string];
-}
-
-// windows-specific file event data
-table WinPE {
-    arch:string;
-    is_dotnet:bool;
-    sections:[FileSection];
-    imports:[FileImport];
-}
-
 table FileEvent {
     action:FileAction;
 
@@ -37,16 +18,9 @@ table FileEvent {
     directory:string;
     extension:string;
 
-    owner:string;
-    size:long;
-    mode:short;
-    created_at:long;
-    modified_at:long;
-
-    pe:WinPE;
-
     // rename-specific
     new_name:string;
+    is_directory:bool;
 }
 
 enum NetworkAction : byte {

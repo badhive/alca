@@ -49,9 +49,9 @@ referenced rule, and returns a boolean value that can be used in boolean operati
 ```
 event file
 
-private rule my_rule_a : file { file.name == "of_interest.txt" }
+private rule my_rule_a : file { file.name == "of_interest" }
 
-rule my_rule_b : file { my_rule_a and file.size_in_bytes > 10000 }
+rule my_rule_b : file { my_rule_a and not file.is_directory }
 ```
 
 In this case, `my_rule_b` will trigger if a file's name is "of_interest.txt" AND its size is greater than 10,000 bytes.
@@ -137,15 +137,14 @@ ALCA has support for iterator expressions. These iterate through an array, doing
 If a specified number of conditions are met, then the expression evaluates to true. They behave like and resemble [YARA's 
 iterators](https://yara.readthedocs.io/en/stable/writingrules.html#iterators) prior to v4.0.
 
-For example, the following expression checks that for **all** sections of a file, the section name either begins with 
-".vmp" + a decimal digit, or has the name ".text".
+For example, the following expression checks that for **all** functions of a process' call stack, none of them
+is "NtAllocateVirtualMemory"". Effectively, this triggers if NtAllocateVirtualMemory isn't in a process' call stack.
 
 ```
-rule check_vmprotect : file {
-   file.num_sections >= 3 and
-   for 3 i in (0..file.num_sections) : (
-      file.sections[i].name matches /\.vmp[0-9]/ or
-      file.sections[i].name == ".text"
+rule check_call_stack : process {
+   process.action == process.ALLOCVM_REMOTE and
+   for all i in (0..process.call_stack_size) : (
+      not process.call_stack[i] icontains "NtAllocateVirtualMemory"
    )
 }
 ```
