@@ -57,6 +57,11 @@ void flogf(FILE *fd, const char* level, const char *format, ...)
         fmt += color;
     }
     fmt += "[%s] ";
+    if (no_color)
+    {
+        fmt += level;
+        fmt += " ";
+    }
     fprintf(fd, fmt.c_str(), time_str);
 
     va_list args;
@@ -291,7 +296,7 @@ SOCKET submit_remote(const std::string &host, const std::string &binpath)
         return s;
     }
     std::ifstream ifs;
-    ifs.open(binpath);
+    ifs.open(binpath, std::ios_base::binary | std::ios_base::in);
     if (ifs.fail())
     {
         flogf(stderr, "[erro]", "could not open executable file %s: %s", binpath.c_str(), std::strerror(errno));
@@ -400,7 +405,7 @@ int run(const std::string &binpath, const std::vector<std::string> &rulePaths, i
         s = submit_remote(remoteAddr, binpath);
     if (s == INVALID_SOCKET)
         return -1;
-    flogf(stdout, "[scss]", "submitted to sensor successfully");
+    flogf(stdout, "[info]", "submitted binary to sensor");
     rc = recv(s, reinterpret_cast<char *>(&packetSize), sizeof(packetSize), 0);
     if (check_recv(rc) < 0)
     {
@@ -438,7 +443,7 @@ int run(const std::string &binpath, const std::vector<std::string> &rulePaths, i
         flogf(stdout, "[warn]", "version mismatch between alca and sensor");
     if (hdr.data_type == AC_PACKET_DATA_SUBMIT_ERROR)
     {
-        flogf(stderr, "[erro]", "there was an error with binary submission, check sensor logs for more details");
+        flogf(stderr, "[erro]", "there was an error with your submission, check sensor logs for more details");
         conn_close(s);
         return -1;
     }
@@ -452,7 +457,7 @@ int run(const std::string &binpath, const std::vector<std::string> &rulePaths, i
     ac_packet_get_data(hpacket, data.data());
     std::string sensor_name(data.begin(), data.end());
     std::string sPort = std::to_string(localPort);
-    flogf(stdout, "[info]", "connected to sensor: %s @ %s", sensor_name.c_str(),
+    flogf(stdout, "[scss]", "connected to sensor: %s @ %s", sensor_name.c_str(),
         mode == LOCAL_MODE
         ? sPort.c_str()
         : remoteAddr.c_str());
