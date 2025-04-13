@@ -20,7 +20,10 @@ set(ALCA_SOURCES libalca/lexer.c
         libalca/packet.c
 )
 
-set (ALCA_MODULES libalca/modules/file.c)
+set (ALCA_MODULES libalca/modules/file.c
+        libalca/modules/process.c
+        libalca/modules/network.c
+        libalca/modules/registry.c)
 
 set(ALCA_INCLUDES "${CMAKE_SOURCE_DIR}/libalca/include"
         "${CMAKE_SOURCE_DIR}/libs/include"
@@ -59,10 +62,12 @@ target_link_libraries(alca-shared ${ALCA_LINK_LIBRARIES})
 add_executable(alca cli/alca.cpp
         cli/conn.cpp
         cli/conn.hpp
-        cli/modules/file.cpp
-        cli/modules/modules.hpp
-        cli/modules/utils.cpp
+        cli/modules.cpp
+        cli/modules.hpp
+        cli/utils.cpp
+        cli/alca.fb.hpp
 )
+
 target_include_directories(alca PRIVATE ${ALCA_CLI_INCLUDES})
 target_link_libraries(alca PRIVATE alca-static flatbuffers)
 if(WIN32)

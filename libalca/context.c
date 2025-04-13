@@ -186,7 +186,7 @@ ac_error ac_context_validate_function_call(ac_context_object *fn, const char *ar
 
 void ac_context_object_set_function(ac_context_object *object, ac_module_function c_function, const char *args)
 {
-    if (!(object->field_type & AC_FIELD_TYPE_FUNCTION && object->field_type & AC_FIELD_TYPE_TOPLEVEL)) return;
+    if (!(object->field_type & AC_FIELD_TYPE_FUNCTION)) return;
     object->c_function = c_function;
     object->arg_types = args;
     object->arg_count = strlen(args);
@@ -321,11 +321,11 @@ void ac_context_load_modules(ac_context *ctx)
     }
 }
 
-int ac_context_object_unmarshal_evtdata(ac_context_object *object, unsigned char *edata)
+int ac_context_object_unmarshal_evtdata(ac_context_object *object, unsigned char *edata, size_t edata_size)
 {
     if (!object->unmarshal)
         return FALSE;
-    return object->unmarshal(object, edata);
+    return object->unmarshal(object, edata, edata_size);
 }
 
 ac_context_object *ac_context_object_get_module(ac_context_object *object)

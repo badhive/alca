@@ -153,6 +153,15 @@ void ac_compiler_free(ac_compiler *compiler)
         }
         ac_free(compiler->sequence_table);
     }
+    if (compiler->errors)
+    {
+        for (int i = 0; i < compiler->error_count; i++)
+        {
+            if (compiler->errors[i].message)
+                ac_free(compiler->errors[i].message);
+        }
+        ac_free(compiler->errors);
+    }
     if (compiler->asts)
     {
         for (int i = 0; i < compiler->nsources; i++)
@@ -175,13 +184,15 @@ void ac_compiler_set_silence_warnings(ac_compiler *compiler, int silence_warning
 
 void compiler_add_error(ac_compiler *compiler, ac_error error, char *message)
 {
+    char *msg = ac_alloc(strlen(message) + 1); // NOLINT
+    strcpy(msg, message);
     if (compiler->error_count == 0)
         compiler->errors = ac_alloc(sizeof(ac_compiler_error));
     else
         compiler->errors = ac_realloc(compiler->errors, (compiler->error_count + 1) * sizeof(ac_compiler_error));
     memcpy(
         compiler->errors + compiler->error_count,
-        &(ac_compiler_error){error, message},
+        &(ac_compiler_error){error, msg},
         sizeof(ac_compiler_error)
     );
     compiler->error_count++;
@@ -360,6 +371,7 @@ ac_error ac_compiler_check_ast(ac_compiler *compiler)
             char *nerr = ac_alloc(strlen(err) + 1);
             strcpy(nerr, err);
             compiler_add_error(compiler, code, nerr);
+            ac_free(nerr);
         }
         ac_checker_free(checker);
     }
@@ -409,7 +421,15 @@ ac_error compiler_compile_rule(ac_compiler *compiler, ac_statement *rule, int se
     if (rule->u.rule.event)
     {
         if (compiler_find_module_ordinal(compiler, rule->u.rule.event->value, &ordinal) != AC_ERROR_SUCCESS)
+        {
+            const char *fmt = "%s: error (line %d): module '%s' exists but is not included";
+            size_t msg_length = strlen(rule->source_file_) + strlen(fmt) + strlen(rule->u.rule.event->value) + 1;
+            char *msg = ac_alloc(msg_length);
+            snprintf(msg, msg_length, fmt, rule->source_file_, rule->u.rule.event->line, rule->u.rule.event->value);
+            compiler_add_error(compiler, AC_ERROR_MODULE, msg);
+            ac_free(msg);
             return AC_ERROR_UNSUCCESSFUL;
+        }
     }
     if ((status = ac_bytecode_emit_rule(compiler->builder, rule)) != AC_ERROR_SUCCESS)
         return status;
@@ -423,6 +443,7 @@ ac_error compiler_compile_rule(ac_compiler *compiler, ac_statement *rule, int se
 ac_error compiler_compile_sequence(ac_compiler *compiler, ac_statement *sequence)
 {
     uint32_t flags = 0;
+    ac_error err = AC_ERROR_SUCCESS;
     uint32_t max_span = sequence->u.sequence.max_span;
     uint32_t lname = strlen(sequence->u.sequence.name->value);
     uint32_t offset = ac_arena_add_string(compiler->data_arena,
@@ -436,21 +457,20 @@ ac_error compiler_compile_sequence(ac_compiler *compiler, ac_statement *sequence
         {
             int idx = __ac_compiler_find_rule_idx_by_name(compiler, sequence->u.sequence.rules[i]->u.rule.name->value);
             if (idx == -1)
-            {
-                ac_free(indices);
-                return AC_ERROR_UNSUCCESSFUL;
-            }
+                continue; // don't exit, gather other potential errors
             indices[i] = (uint32_t)idx;
         } else
         {
-            ac_error err = compiler_compile_rule(compiler, sequence->u.sequence.rules[i], TRUE, &indices[i]);
-            if (err != AC_ERROR_SUCCESS)
-                return err;
+            ac_error rc = compiler_compile_rule(compiler, sequence->u.sequence.rules[i], TRUE, &indices[i]);
+            if (rc != AC_ERROR_SUCCESS)
+            {
+                err = rc;
+            }
         }
     }
     ac_sequence_entry entry = {flags, max_span, rule_count, lname, offset, indices};
     compiler_add_sequence_entry(compiler, &entry);
-    return AC_ERROR_SUCCESS;
+    return err;
 }
 
 ac_error compiler_export(ac_compiler *compiler, const char *out)
@@ -537,12 +557,21 @@ ac_error compiler_compile_statements(ac_compiler *compiler)
     compiler->done = TRUE;
     ac_ast *ast = ac_alloc(sizeof(ac_ast));
     ast->path = "(namespace)";
-
+    ac_error err = AC_ERROR_SUCCESS;
     for (int i = 0; i < compiler->nsources; i++)
     {
         ac_ast *subast = compiler->asts[i];
         for (int j = 0; j < subast->stmt_count; j++)
-            ac_expr_ast_add_stmt(ast, subast->statements[j]);
+        {
+            ac_statement *stmt = subast->statements[j];
+            stmt->source_file_ = subast->path;
+            if (stmt->type == STMT_SEQUENCE)
+            {
+                for (int k = 0; k < stmt->u.sequence.rule_count; k++)
+                    stmt->u.sequence.rules[k]->source_file_ = stmt->source_file_;
+            }
+            ac_expr_ast_add_stmt(ast, stmt);
+        }
     }
 
     for (int i = 0; i < ast->stmt_count; i++)
@@ -559,9 +588,11 @@ ac_error compiler_compile_statements(ac_compiler *compiler)
                 break;
         }
         if (code != AC_ERROR_SUCCESS)
-            return code;
+        {
+            err = code;
+        }
     }
-    return AC_ERROR_SUCCESS;
+    return err;
 }
 
 ac_error ac_compiler_compile(ac_compiler *compiler, const char *out)

@@ -184,13 +184,16 @@ ac_error bytecode_emit_call(ac_builder *builder, ac_expr *expr)
 {
     ac_error error = AC_ERROR_SUCCESS;
     // push args right to left
-    for (int i = (int)expr->u.call.arg_count - 1; i >= 0; i--)
+    for (int i = expr->u.call.arg_count - 1; i >= 0; i--)
     {
-        if ((error = bytecode_emit_expr(builder, expr)) != AC_ERROR_SUCCESS)
+        if ((error = bytecode_emit_expr(builder, expr->u.call.arguments[i])) != AC_ERROR_SUCCESS)
             return error;
     }
     ac_arena_add_code_with_arg(builder->code, OP_PUSHINT, expr->u.call.arg_count);
-    // pop a1; pop a2; ...; pop aN; pop call_object; push call_object(a1, a2, ... aN)
+    // this would push call object onto stack
+    if ((error = bytecode_emit_expr(builder, expr->u.call.callee)) != AC_ERROR_SUCCESS)
+        return error;
+    // pop call_object; pop arg_count; pop a1; pop a2; ...; pop aN; push call_object(a1, a2, ... aN)
     ac_arena_add_code(builder->code, OP_CALL);
     return error;
 }

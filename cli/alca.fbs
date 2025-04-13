@@ -35,6 +35,7 @@ table NetworkEvent {
     action:NetworkAction;
     tcp:bool;
     udp:bool;
+    ipv6:bool;
     local_addr:string;
     local_port:short;
     remote_addr:string;
@@ -47,69 +48,43 @@ table NetworkEvent {
 enum ProcessAction : byte {
     ProcessStart,
     ProcessEnd,
-    ThreadCreate,
-    ThreadTerminate,
+    CreateRemoteThread,
+    CreateLocalThread,
+    TerminateLocalThread,
+    TerminateRemoteThread,
     ImageLoad,
     ImageUnload,
     AllocLocal,
     AllocRemote
 }
 
-// windows-specific process event data
-table WinProcess {
-    // action = ImageLoad / ImageUnload
-    image_name:string;
-    image_size:int;
-
-    // action = AllocLocal / AllocRemote
-    alloc_size:long;
-    alloc_data:[ubyte];
-}
-
 table ProcessEvent {
     action:ProcessAction;
-    // subject pid
+
+    // subject process info
     pid:int;
-    // parent pid
-    ppid:int;
-    // pid of running binary
+    name:string;
+
+    // running process info
     self_pid:int;
 
-    // action = ProcessStart
-    name:string;
+    // action = ProcessStart / ProcessEnd
     command_line:string;
 
-    win:WinProcess;
+    // action = ImageLoad / ImageUnload
+    image_name:string;
 }
 
 enum RegistryAction : byte {
+    RegOpenKey,
     RegCreateKey,
     RegSetValue,
     RegDeleteKey,
     RegDeleteValue,
 }
 
-enum RegistryValueType : byte {
-    RegBinary,
-    RegDWord,
-    RegQWord,
-    RegString,
-    RegStringList,
-    RegLink
-}
-
-table RegistryValue {
-    int_:long;
-    str_:string;
-    strlist:[string];
-    binary:[ubyte];
-}
-
 table RegistryEvent {
     action:RegistryAction;
     key_path:string;
     value_name:string;
-
-    value_type:RegistryValueType;
-    value:RegistryValue;
 }

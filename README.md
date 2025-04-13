@@ -7,7 +7,8 @@ refer to as a [sensor](#sensors)).
 
 ### Install
 
-To build the project yourself, you will need Git, a C compiler (gcc, MinGW, MSVC) and CMake installed. 
+ALCA has been tested on Windows and Linux. 
+To build the project yourself, you will need Git, a C compiler (gcc, MinGW, etc.) and CMake installed. 
 
 ```sh
 # clone the repository
@@ -18,7 +19,7 @@ cd alca
 git submodule update --init
 
 # build
-cmake -B build . 
+cmake -S . -B build/ -DCMAKE_BUILD_TYPE=Release
 cmake --build build/ --target alca
 ```
 
@@ -37,12 +38,12 @@ the received event's properties. Here's an example:
 event file
 
 rule detect_foo_ransomware : file {
-    file.action == file.FILE_RENAME and file.new_name iendswith ".foo"
+    file.action == file.FileRename and file.new_name iendswith ".foo"
 } 
 ```
 
 Let's break it down:
-1. The rule first checks if the file action matches the user-defined enum `FILE_RENAME` (meaning, a file was renamed).
+1. The rule first checks if the file action matches the user-defined enum `FileRename` (meaning, a file was renamed).
 If this condition is true, then the second condition (on the right hand side of `and`) is evaluated.
 2. The rule then does a **case-insensitive** check on the new file name to see if it ends with ".foo" (in other words, if
 the extension has changed). If both these conditions are true, then the rule is flagged as true, and we receive a
@@ -50,6 +51,42 @@ notification similar to the one below:
 
 ```
 [2025-01-01 00:00:00] [rule] [malware.exe] name = "detect_foo_ransomware"
+```
+
+The available fields for each event (\*Event) and their types can be found in the [ALCA FlatBuffers schema file](cli/alca.fbs).
+The following functions are also supported:
+
+| Module    | Args        | Description                                                 |
+|-----------|-------------|-------------------------------------------------------------|
+| `network` | `nslookup4` | Performs a DNS lookup for a provided IPv4 address and port. |
+| `network` | `nslookup6` | Performs a DNS lookup for a provided IPv6 address and port. |
+
+Here's an example of a more complex rule that makes use of all modules that ALCA currently supports:
+
+```
+event file
+event process
+event network
+event registry
+
+private rule test_rule : file {
+	file.action == file.FileCreate and file.path icontains "MAL.TXT"
+}
+
+sequence test_sequence [
+    test_rule
+    :file { file.action == file.FileDelete and file.name iequals "MAL2.TXT" }
+    :network {
+        network.action == network.NetConnect and
+        not network.ipv6 and
+        network.nslookup4( network.remote_addr, network.remote_port ) icontains "googleusercontent.com"
+    }
+    :registry {
+        registry.action == registry.RegOpenKey and
+        registry.key_path iendswith "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+    }
+    :registry { registry.action == registry.RegSetValue and registry.value_name == "TestBinary" }
+]
 ```
 
 #### Sequences
@@ -65,12 +102,12 @@ They can contain either predefined rules or anonymous rules, which are defined i
 event file
 
 private rule detect_foo_rename : file {
-    file.action == file.FILE_RENAME and file.new_name iendswith ".foo"
+    file.action == file.FileRename and file.new_name iendswith ".foo"
 }
 
 sequence detect_foo_ransomware : 5s [
     detect_foo_rename,
-    :file { file.action == file.FILE_CREATE and file.name iequals "foo_ransom_note.txt" }
+    :file { file.action == file.FileCreate and file.name iequals "foo_ransom_note.txt" }
 ]
 ```
 
@@ -100,11 +137,16 @@ The sensor (assumed to be installed on the same machine) can then run this file 
 back to the engine via the same socket. If connected in remote mode (-r), ALCA sends the entire requested file over
 the socket to be received and run by the sensor.
 
-ALCA's own flagship sensor is currently in active development.
+ALCA's own flagship sensor, Governor, is available [here](https://github.com/badhive/governor).
 
 ### Documentation
 
 View the full documentation [here](docs).
+
+### Issues
+
+If you find any problems with the project, feel free to open an issue on the 
+[issues page](https://github.com/badhive/alca/issues).
 
 ### Credits / References / Inspirations
 

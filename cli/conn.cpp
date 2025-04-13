@@ -15,13 +15,14 @@
  */
 
 #include <string>
-#include <Ws2tcpip.h>
 
 #include "conn.hpp"
 
 #ifdef _WIN32
+#include <ws2tcpip.h>
 #define conn_error() WSAGetLastError()
 #else
+#define closesocket close
 #define conn_error() errno
 #endif
 
@@ -64,7 +65,7 @@ SOCKET conn_connect(const char *address, uint16_t port)
         last_error = conn_error();
         goto end;
     }
-    rc = connect(conn, result->ai_addr, static_cast<int>(result->ai_addrlen));
+    rc = connect(conn, result->ai_addr, sizeof(sockaddr));
     if (rc == SOCKET_ERROR)
     {
         last_error = conn_error();

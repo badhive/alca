@@ -7,12 +7,12 @@ the received event's properties. Here's an example:
 event file
 
 rule detect_foo_ransomware : file {
-    file.action == file.FILE_RENAME and file.new_name iendswith ".foo"
+    file.action == file.FileRename and file.new_name iendswith ".foo"
 } 
 ```
 
 Let's break it down:
-1. The rule first checks if the file action matches the user-defined enum `FILE_RENAME` (meaning, a file was renamed).
+1. The rule first checks if the file action matches the user-defined enum `FileRename` (meaning, a file was renamed).
    If this condition is true, then the second condition (on the right hand side of `and`) is evaluated.
 2. The rule then does a **case-insensitive** check on the new file name to see if it ends with ".foo" (int other words, if
    the extension has changed). If both these conditions are true, then the rule is flagged as true, and we receive a
@@ -83,14 +83,14 @@ ALCA rules contain a variety of operators that can be used when querying event d
 
 ### Bitwise Operators
 
-| Operator | Description     | Example usage                          |
-|----------|-----------------|----------------------------------------|
-| `\|`     | Bitwise OR      | `0x10 \| 0x01`                         |
-| `^`      | Bitwise XOR     | `0x10 ^ 0x01`                          |
-| `&`      | Bitwise AND     | `file.PERMS & file.FILE_READONLY != 0` |
-| `~`      | Bitwise NOT     | `~23`                                  |
-| `<<`     | Bit-shift left  | `0x01 << 8`                            |
-| `>>`     | Bit-shift right | `0x10 >> 8`                            |
+| Operator | Description     | Example usage      |
+|----------|-----------------|--------------------|
+| `\|`     | Bitwise OR      | `0x10 \| 0x01`     |
+| `^`      | Bitwise XOR     | `0x10 ^ 0x01`      |
+| `&`      | Bitwise AND     | `0x10 & 0x10 != 0` |
+| `~`      | Bitwise NOT     | `~23`              |
+| `<<`     | Bit-shift left  | `0x01 << 8`        |
+| `>>`     | Bit-shift right | `0x10 >> 8`        |
 
 ### String Length Operator
 
@@ -142,7 +142,7 @@ is "NtAllocateVirtualMemory"". Effectively, this triggers if NtAllocateVirtualMe
 
 ```
 rule check_call_stack : process {
-   process.action == process.ALLOCVM_REMOTE and
+   process.action == process.AllocRemote and
    for all i in (0..process.call_stack_size) : (
       not process.call_stack[i] icontains "NtAllocateVirtualMemory"
    )

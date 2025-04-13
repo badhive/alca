@@ -30,7 +30,7 @@
 #define AC_PACKET_DATA_TRACE_START 0x13 // sent by sensor to alca
 #define AC_PACKET_DATA_EVENT 0x14 // for every event
 #define AC_PACKET_DATA_TRACE_END 0x15
-#define AC_PACKET_MAX_RECV_SIZE 1024
+#define AC_PACKET_MAX_RECV_SIZE 10240 * 2 // 20kB
 #define AC_PACKET_SEQUENCE_LAST 0xffffffff
 
 PACK(typedef struct ac_packet_header

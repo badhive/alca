@@ -59,7 +59,7 @@ typedef ac_module *(*ac_module_load_callback)();
 
 typedef void (*ac_module_unload_callback)(const ac_module *);
 
-typedef int (*ac_module_event_unmarshaller)(ac_module *module, const unsigned char *edata);
+typedef int (*ac_module_event_unmarshaller)(ac_module *module, const unsigned char *edata, size_t edata_len);
 
 typedef ac_error (*ac_module_function)(ac_module *fn_object, ac_object *args, ac_object *result);
 
@@ -218,7 +218,7 @@ void ac_context_add_module(ac_context *ctx, ac_module_table_entry *module);
 
 void ac_context_load_modules(ac_context *ctx);
 
-int ac_context_object_unmarshal_evtdata(ac_context_object *object, unsigned char *edata);
+int ac_context_object_unmarshal_evtdata(ac_context_object *object, unsigned char *edata, size_t edata_size);
 
 ac_context_object *ac_context_object_get_module(ac_context_object *object);
 

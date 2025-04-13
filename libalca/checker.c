@@ -612,7 +612,7 @@ int checker_check_rule(ac_checker *checker, ac_statement *stmt, int is_seq_rule)
         ac_module_table_entry module = {0};
         if (!ac_context_get_module(checker->ctx, stmt->u.rule.event->value, &module))
         {
-            checker_errorf(checker, stmt->u.rule.event->line, AC_ERROR_MODULE, "module %s not included",
+            checker_errorf(checker, stmt->u.rule.event->line, AC_ERROR_MODULE, "module %s does not exist",
                 stmt->u.rule.event->value);
             ret = FALSE;
             goto end;

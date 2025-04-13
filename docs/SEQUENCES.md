@@ -11,12 +11,12 @@ They can contain either predefined rules or anonymous rules, which are defined i
 event file
 
 private rule detect_foo_rename : file {
-    file.action == file.FILE_RENAME and file.new_name iendswith ".foo"
+    file.action == file.FileRename and file.new_name iendswith ".foo"
 }
 
 sequence detect_foo_ransomware : 5s [
     detect_foo_rename,
-    :file { file.action == file.FILE_CREATE and file.name iequals "foo_ransom_note.txt" }
+    :file { file.action == file.FileCreate and file.name iequals "foo_ransom_note.txt" }
 ]
 ```
 

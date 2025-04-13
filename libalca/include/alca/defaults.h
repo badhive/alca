@@ -19,9 +19,16 @@
 
 #include <alca/module.h>
 
-// file module
-ac_module *ac_default_file_load_callback();
-void ac_default_file_unload_callback(const ac_module *module);
-int ac_default_file_unmarshal_callback(ac_module *module, const unsigned char *event_data);
+#define DEF_MODULE(name) \
+    ac_module *ac_default_##name##_load_callback(); \
+    void ac_default_##name##_unload_callback(const ac_module *module); \
+    int ac_default_##name##_unmarshal_callback(ac_module *module, const unsigned char *event_data, size_t size); \
+
+DEF_MODULE(file)
+DEF_MODULE(process)
+DEF_MODULE(network)
+DEF_MODULE(registry)
+
+#undef DEF_MODULE
 
 #endif //AC_DEFAULTS_H

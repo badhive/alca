@@ -20,10 +20,10 @@ ac_module *ac_default_file_load_callback()
 {
     enum file_event_action
     {
-        FILE_CREATE = 0,
-        FILE_RENAME = 1,
-        FILE_DELETE = 2,
-        FILE_MODIFY = 3,
+        FileCreate = 0,
+        FileRename = 1,
+        FileDelete = 2,
+        FileModify = 3,
     };
     ac_module *module = ac_module_create("file", ALCA_VERSION, NULL);
 
@@ -35,10 +35,10 @@ ac_module *ac_default_file_load_callback()
     ac_module_add_field(module, "extension", AC_FIELD_TYPE_STRING);
     ac_module_add_field(module, "new_name", AC_FIELD_TYPE_STRING);
 
-    ac_module_add_enum(module, FILE_CREATE);
-    ac_module_add_enum(module, FILE_RENAME);
-    ac_module_add_enum(module, FILE_DELETE);
-    ac_module_add_enum(module, FILE_MODIFY);
+    ac_module_add_enum(module, FileCreate);
+    ac_module_add_enum(module, FileRename);
+    ac_module_add_enum(module, FileDelete);
+    ac_module_add_enum(module, FileModify);
 
     return module;
 }
@@ -47,7 +47,7 @@ ac_module *ac_default_file_load_callback()
 void ac_default_file_unload_callback(const ac_module *module) {}
 
 // developer-implemented
-int ac_default_file_unmarshal_callback(ac_module *module, const unsigned char *event_data)
+int ac_default_file_unmarshal_callback(ac_module *module, const unsigned char *event_data, size_t size)
 {
     return FALSE;
 }

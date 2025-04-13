@@ -17,8 +17,21 @@
 #ifndef MODULES_H
 #define MODULES_H
 
-#include <flatbuffers/flatbuffers.h>
 #include <alca.h>
+#include <flatbuffers/flatbuffers.h>
+
+#define ALCA_MODULE(module) \
+    namespace module \
+    { \
+        int unmarshal_callback(ac_module *module, const unsigned char *event_data, size_t data_size); \
+        \
+        static ac_module_table_entry module_entry = { \
+            .name = #module, \
+            .load_callback = ac_default_##module##_load_callback, \
+            .unload_callback = ac_default_##module##_unload_callback, \
+            .unmarshal_callback = unmarshal_callback, \
+        }; \
+    } \
 
 namespace alca::modules
 {
@@ -27,22 +40,23 @@ namespace alca::modules
         void set_string_field(ac_module *module, const char *field_name, const flatbuffers::String* value);
     }
 
-    namespace file
-    {
-        int unmarshal_callback(ac_module *module, const unsigned char *event_data);
+    ALCA_MODULE(file)
 
-        static ac_module_table_entry module_entry = {
-            .name = "file",
-            .load_callback = ac_default_file_load_callback,
-            .unload_callback = ac_default_file_unload_callback,
-            .unmarshal_callback = unmarshal_callback,
-        };
-    }
+    ALCA_MODULE(process)
+
+    ALCA_MODULE(network)
+
+    ALCA_MODULE(registry)
 
     inline void update_defaults(ac_compiler *compiler)
     {
         ac_compiler_include_module(compiler, &file::module_entry);
+        ac_compiler_include_module(compiler, &process::module_entry);
+        ac_compiler_include_module(compiler, &network::module_entry);
+        ac_compiler_include_module(compiler, &registry::module_entry);
     }
 }
+
+#undef ALCA_MODULE
 
 #endif //MODULES_H
