@@ -22,6 +22,7 @@
 #include <alca/arena.h>
 #include <alca/utils.h>
 #include <alca/vm.h>
+#include <sys/time.h>
 
 #include <pcre2.h>
 #include "hashmap.h"
@@ -39,7 +40,7 @@
 #define push(x) {\
     if (vm->sp >= VM_STACK_MAX) \
     { \
-        *result = ERROR_STACK_OVERFLOW; \
+        *result = AC_ERROR_STACK_OVERFLOW; \
         stop = TRUE; \
         break; \
     } \
@@ -80,7 +81,7 @@ typedef struct vm_monrule
 {
     uint32_t idx;
     char *name;
-    time_t trigger;
+    struct timeval trigger;
 } vm_monrule;
 
 typedef struct vm_sequence
@@ -233,9 +234,9 @@ void vm_report_triggered(ac_vm *vm, int type, char *name, time_t at, void *exec_
 
 // notifies sequences monitoring rule at `rule_idx` about the time the rule was triggered.
 // if the trigger times are ascending, then rules triggered sequentially so sequence is TRUE
-void vm_update_sequences(ac_vm *vm, uint32_t rule_index, time_t trigger_time, void *exec_context)
+void vm_update_sequences(ac_vm *vm, uint32_t rule_index, struct timeval trigger_time, void *exec_context)
 {
-    time_t at = time(NULL);
+    struct timeval at = trigger_time;
     vm_monrule rule = {rule_index, vm->current_rule, trigger_time};
     for (int i = 0; i < vm->cpl->nsequences; i++)
     {
@@ -245,13 +246,17 @@ void vm_update_sequences(ac_vm *vm, uint32_t rule_index, time_t trigger_time, vo
         else
             continue;
         int idx = 0;
-        time_t first = 0;
-        time_t last = -1;
+        struct timeval first = {0};
+        struct timeval last = {0};
         int sequential = TRUE;
+
         for (int j = 0; j < s->rule_count; j++) // iter starts
         {
             const vm_monrule *r = hashmap_get(s->monitored_rules, &(vm_monrule){s->rule_indices[j]});
-            if (!r->trigger || (r->trigger && r->trigger < last))
+            if (!r->trigger.tv_sec
+                || (r->trigger.tv_sec
+                    && !(r->trigger.tv_sec >= last.tv_sec
+                    && r->trigger.tv_usec > last.tv_usec)))
             {
                 sequential = FALSE;
                 break;
@@ -264,10 +269,10 @@ void vm_update_sequences(ac_vm *vm, uint32_t rule_index, time_t trigger_time, vo
         if (sequential)
         {
             // if maxSpan is 0, or if it's greater than 0 AND the trigger times are within the span window
-            if (!s->max_span || (s->max_span && last - first <= s->max_span))
+            if (!s->max_span || (s->max_span && last.tv_sec - first.tv_sec <= s->max_span))
             {
                 char *name = ac_arena_get_string(vm->data, vm->cpl->sequence_table[i].name_offset);
-                vm_report_triggered(vm, AC_VM_SEQUENCE, name, at, exec_context);
+                vm_report_triggered(vm, AC_VM_SEQUENCE, name, at.tv_sec, exec_context);
             }
         }
     }
@@ -279,15 +284,15 @@ int ac_vm_get_trigger_count(ac_vm *vm)
 }
 
 /*
-+----------+
-| version  | module version
-+----------+
-| etypelen | event type length
-+----------+
-| typename | event type
-+----------+
-| evntdata | event data
-+----------+
++------------+
+| version :4 | module version
++------------+
+| etypelen:4 | event type length
++------------+
+| typename:? | event type
++------------+
+| evntdata:? | event data
++------------+
 */
 
 // executes all rules with matching event type or event type 0 (none)
@@ -295,24 +300,31 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize, void *exec_
 {
     vm->ntriggers = 0; // reset trigger count
     char *event_type = NULL;
-    ac_error err = ERROR_SUCCESS;
+    ac_error err = AC_ERROR_SUCCESS;
 
     // get event version, name and data
     if (esize < 8)
-        return ERROR_BAD_DATA;
-    uint32_t etypever = b2l(*(uint32_t *)event);
-    uint32_t etypelen = b2l(*(uint32_t *)(event + sizeof(uint32_t)));
-    if (esize + 4 < etypelen)
-        return ERROR_BAD_DATA;
+        return AC_ERROR_BAD_DATA;
+    uint32_t etypever = netint(*(uint32_t *)event);
+    uint32_t etypelen = netint(*(uint32_t *)(event + sizeof(uint32_t)));
+
+    if (esize - 8 < etypelen)
+        return AC_ERROR_BAD_DATA;
+
     event_type = (char *) event + (2 * sizeof(uint32_t));
 
     ac_context_object *mod = ac_context_get(vm->cpl->ctx, event_type);
     if (!mod)
-        return ERROR_MODULE; // unknown module name
+        return AC_ERROR_MODULE; // unknown module name
+
     if (ac_context_object_get_module_version(mod) != etypever)
-        return ERROR_MODULE_VERSION; // version mismatch
-    if (!ac_context_object_unmarshal_evtdata(mod, (unsigned char *) event_type + etypelen))
-        return ERROR_BAD_DATA;
+        return AC_ERROR_MODULE_VERSION; // version mismatch
+
+    if (!ac_context_object_unmarshal_evtdata(
+        mod,
+        (unsigned char *) event_type + etypelen,
+        esize - 8 - etypelen))
+        return AC_ERROR_BAD_DATA;
 
     for (int i = 0; i < vm->cpl->nrules; i++)
     {
@@ -323,22 +335,23 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize, void *exec_
             if (mi == NULL) continue;
             if (strncmp(mi->name, event_type, etypelen) == 0)
             {
-                uint32_t result = 0;
+                uint32_t triggered = 0;
                 vm->current_rule = ac_arena_get_string(vm->data, entry->name_offset);
-                ac_error e = ac_vm_exec_code(vm, vm->code + entry->code_offset, &result);
-                if (e != ERROR_SUCCESS)
+                ac_error e = ac_vm_exec_code(vm, vm->code + entry->code_offset, &triggered);
+                if (e != AC_ERROR_SUCCESS)
                 {
                     printf("[acvm] Rule %s: caught exception: code = %d\n", vm->current_rule, e);
                     err = e;
                 }
-                if (result)
+                if (triggered)
                 {
-                    time_t at = time(NULL);
+                    struct timeval tv = {0};
+                    gettimeofday(&tv, NULL);
                     // report rule has been triggered only if it is not anonymous or private
                     if (!(entry->flags & AC_SEQUENCE_RULE || entry->flags & AC_PRIVATE_RULE))
-                        vm_report_triggered(vm, AC_VM_RULE, vm->current_rule, at, exec_context);
+                        vm_report_triggered(vm, AC_VM_RULE, vm->current_rule, tv.tv_sec, exec_context);
                     // done for all rules to account for external (public and private) rules
-                    vm_update_sequences(vm, i, at, exec_context);
+                    vm_update_sequences(vm, i, tv, exec_context); // need microseconds to differentiate
                 }
                 vm->current_rule = NULL;
             }
@@ -368,7 +381,7 @@ void ac_vm_free(ac_vm *vm)
 ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
 {
     int stop = FALSE;
-    ac_error err = ERROR_SUCCESS;
+    ac_error err = AC_ERROR_SUCCESS;
 
     // registers
     ac_object r1;
@@ -382,7 +395,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
     {
         if (vm->callstack[i] == (long long)vm->ip)
         {
-            err = ERROR_RECURSION;
+            err = AC_ERROR_RECURSION;
             printf("[acvm] Rule %s: caught exception: code = %d\n", vm->current_rule, err);
             stop = TRUE;
             break;
@@ -453,7 +466,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 DBGPRINT("SHL: %d << %d", r2.i, r1.i);
                 if (r1.i > 32)
                 {
-                    err = ERROR_BAD_OPERAND;
+                    err = AC_ERROR_BAD_OPERAND;
                     stop = TRUE;
                 }
                 else
@@ -470,7 +483,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 DBGPRINT("SHR: %d >> %d", r2.i, r1.i);
                 if (r1.i > 32)
                 {
-                    err = ERROR_BAD_OPERAND;
+                    err = AC_ERROR_BAD_OPERAND;
                     stop = TRUE;
                 }
                 else
@@ -564,6 +577,8 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
             {
                 pop(r1)
                 pop(r2)
+                assert(r1.s != NULL);
+                assert(r2.s != NULL);
                 DBGPRINT("STREQ: %s == %s", r2.s, r1.s);
                 r1.b = strcmp(r2.s, r1.s) == 0;
                 push(r1)
@@ -701,7 +716,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 ac_context_object *module = ac_context_get(vm->cpl->ctx, r2.s);
                 if (module == NULL)
                 {
-                    err = ERROR_MODULE;
+                    err = AC_ERROR_MODULE;
                     stop = TRUE;
                     break;
                 }
@@ -858,7 +873,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 unsigned char *ret = vm->ip;
                 err = ac_vm_exec_code(vm, vm->code + e.code_offset, &r2.b);
                 vm->ip = ret;
-                if (err != ERROR_SUCCESS)
+                if (err != AC_ERROR_SUCCESS)
                 {
                     stop = TRUE;
                     break;
@@ -869,23 +884,24 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
             break;
             case OP_CALL:
             {
-                pop(r1)
-                ac_object *args = ac_alloc(r1.i * sizeof(ac_object));
-                for (uint32_t i = 0; i < r1.i; i++)
+                pop(r1) // call object
+                pop(r2) // arg count
+                ac_object *args = ac_alloc(r2.i * sizeof(ac_object));
+                for (uint32_t i = 0; i < r2.i; i++)
                     pop(args[i]);
                 ac_module_function fn = ac_context_object_get_function(r1.o);
-                DBGPRINT("CALL: %p (argc = %d)", fn, r1.i);
+                DBGPRINT("CALL: %p (argc = %d)", fn, r2.i);
                 assert(fn != NULL);
                 ac_object tmp = {0};
-                err = fn(r1.o, args, &tmp);
+                err = fn(r2.o, args, &tmp);
                 ac_free(args);
-                if (err != ERROR_SUCCESS)
+                if (err != AC_ERROR_SUCCESS)
                 {
                     stop = TRUE;
                     break;
                 }
-                r1 = tmp;
-                push(r1)
+                r2 = tmp;
+                push(r2)
             }
             break;
             case OP_FIELD:
@@ -908,7 +924,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 r2.b = ac_context_object_get_array_item(r2.o, r1.i, &r1);
                 if (!r2.b)
                 {
-                    err = ERROR_INDEX;
+                    err = AC_ERROR_INDEX;
                     stop = TRUE;
                     break;
                 }
@@ -939,12 +955,12 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
             break;
             default:
             {
-                err = ERROR_OPERATION;
+                err = AC_ERROR_OPERATION;
                 stop = TRUE;
             }
         }
     }
-    if (err != ERROR_SUCCESS)
+    if (err != AC_ERROR_SUCCESS)
         *result = FALSE;
     return err;
 }

@@ -79,7 +79,7 @@ void ac_psr_reset_error(ac_parser *parser)
 {
     if (parser->error.message)
         ac_free(parser->error.message);
-    parser->error.code = ERROR_SUCCESS;
+    parser->error.code = AC_ERROR_SUCCESS;
     parser->error.line = -1;
 }
 
@@ -111,7 +111,7 @@ ac_token *ac_psr_previous_token(ac_parser *parser)
     if (parser->current == 0)
     {
         ac_token *token = ac_psr_getToken(parser, 0);
-        ac_psr_set_error(parser, token, ERROR_INVALID_SYNTAX, "invalid syntax");
+        ac_psr_set_error(parser, token, AC_ERROR_INVALID_SYNTAX, "invalid syntax");
     }
     return parser->tokens[parser->current - 1];
 }
@@ -189,36 +189,36 @@ ac_expr *ac_psr_range(ac_parser *parser)
         fixed = *(uint32_t *)ac_psr_previous_token(parser)->value;
     } else
     {
-        ac_psr_set_error(parser, ac_psr_current_token(parser), ERROR_INVALID_SYNTAX,
+        ac_psr_set_error(parser, ac_psr_current_token(parser), AC_ERROR_INVALID_SYNTAX,
             "expected number or quantifiers 'any' or 'all'");
         return NULL;
     }
-    if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, ERROR_UNEXPECTED_TOKEN, "expected identifier"))
+    if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, AC_ERROR_UNEXPECTED_TOKEN, "expected identifier"))
         return NULL;
     ivar = ac_psr_previous_token(parser);
-    if (!ac_psr_consume(parser, TOKEN_IN, ERROR_UNEXPECTED_TOKEN, "unexpected token"))
+    if (!ac_psr_consume(parser, TOKEN_IN, AC_ERROR_UNEXPECTED_TOKEN, "unexpected token"))
         return NULL;
-    if (!ac_psr_consume(parser, TOKEN_LPAREN, ERROR_UNEXPECTED_TOKEN, "expected '('"))
+    if (!ac_psr_consume(parser, TOKEN_LPAREN, AC_ERROR_UNEXPECTED_TOKEN, "expected '('"))
         return NULL;
     range_start = ac_psr_expression(parser);
     if (!range_start)
         return NULL;
     if (!ac_psr_consume(parser,
         TOKEN_DOT_DOT,
-        ERROR_UNEXPECTED_TOKEN,
+        AC_ERROR_UNEXPECTED_TOKEN,
         "unexpected range specifier '..'"))
         return NULL;
     range_end = ac_psr_expression(parser);
     if (!range_end)
         return NULL;
-    if (!ac_psr_consume(parser, TOKEN_RPAREN, ERROR_UNEXPECTED_TOKEN, "expected ')'"))
+    if (!ac_psr_consume(parser, TOKEN_RPAREN, AC_ERROR_UNEXPECTED_TOKEN, "expected ')'"))
         return NULL;
-    if (!ac_psr_consume(parser, TOKEN_COLON, ERROR_UNEXPECTED_TOKEN, "expected ':'"))
+    if (!ac_psr_consume(parser, TOKEN_COLON, AC_ERROR_UNEXPECTED_TOKEN, "expected ':'"))
         return NULL;
-    if (!ac_psr_consume(parser, TOKEN_LPAREN, ERROR_UNEXPECTED_TOKEN, "expected '('"))
+    if (!ac_psr_consume(parser, TOKEN_LPAREN, AC_ERROR_UNEXPECTED_TOKEN, "expected '('"))
         return NULL;
     condition = ac_psr_expression(parser);
-    if (!ac_psr_consume(parser, TOKEN_RPAREN, ERROR_UNEXPECTED_TOKEN, "expected ')'"))
+    if (!ac_psr_consume(parser, TOKEN_RPAREN, AC_ERROR_UNEXPECTED_TOKEN, "expected ')'"))
         return NULL;
     return ac_expr_new_range(match_type, fixed, ivar, range_start, range_end, condition);
 }
@@ -232,7 +232,7 @@ ac_expr *ac_psr_primary(ac_parser *parser)
         ac_expr *expr = ac_psr_expression(parser);
         if (!ac_psr_consume(parser,
                             TOKEN_RPAREN,
-                            ERROR_UNTERMINATED_EXPRESSION,
+                            AC_ERROR_UNTERMINATED_EXPRESSION,
                             "missing terminating ')'"))
             return NULL;
         return ac_expr_new_grouping(expr);
@@ -241,7 +241,7 @@ ac_expr *ac_psr_primary(ac_parser *parser)
     {
         return ac_psr_range(parser);
     }
-    ac_psr_set_error(parser, ac_psr_current_token(parser), ERROR_INVALID_SYNTAX, "invalid syntax");
+    ac_psr_set_error(parser, ac_psr_current_token(parser), AC_ERROR_INVALID_SYNTAX, "invalid syntax");
     return NULL;
 }
 
@@ -262,7 +262,7 @@ ac_expr *ac_psr_finish_call(ac_parser *parser, ac_expr *callee)
     }
     if (!ac_psr_consume(parser,
                         TOKEN_RPAREN,
-                        ERROR_UNTERMINATED_EXPRESSION,
+                        AC_ERROR_UNTERMINATED_EXPRESSION,
                         "incomplete call (expected ')')"))
     {
         ac_expr_free_expression(call);
@@ -279,7 +279,7 @@ ac_expr *ac_psr_finish_index(ac_parser *parser, ac_expr *object)
         return NULL;
     if ((bracket = ac_psr_consume(parser,
                                   TOKEN_RBRACKET,
-                                  ERROR_UNTERMINATED_EXPRESSION,
+                                  AC_ERROR_UNTERMINATED_EXPRESSION,
                                   "bad index (expected ']')")) == NULL)
         return NULL;
     return ac_expr_new_index(object, expr, bracket);
@@ -290,7 +290,7 @@ ac_expr *ac_psr_finish_field(ac_parser *parser, ac_expr *object)
     ac_token *fieldName;
     if ((fieldName = ac_psr_consume(parser,
                                     TOKEN_IDENTIFIER,
-                                    ERROR_UNEXPECTED_TOKEN,
+                                    AC_ERROR_UNEXPECTED_TOKEN,
                                     "expected identifier")) == NULL)
     {
         return NULL;
@@ -553,14 +553,14 @@ ac_expr *ac_psr_expression(ac_parser *parser)
 ac_expr *ac_psr_rule_body(ac_parser *parser)
 {
     // means we are at the start of a rule scope {}
-    if (!ac_psr_consume(parser, TOKEN_LBRACE, ERROR_UNEXPECTED_TOKEN, "expected '{'"))
+    if (!ac_psr_consume(parser, TOKEN_LBRACE, AC_ERROR_UNEXPECTED_TOKEN, "expected '{'"))
         return NULL;
     ac_expr *expr = ac_psr_expression(parser);
     if (!expr)
         return NULL;
     if (!ac_psr_consume(parser,
                         TOKEN_RBRACE,
-                        ERROR_INVALID_SYNTAX,
+                        AC_ERROR_INVALID_SYNTAX,
                         "invalid syntax"))
         return NULL;
     return expr;
@@ -570,12 +570,12 @@ ac_statement *ac_psr_rule(ac_parser *parser, int private)
 {
     ac_statement *rule = NULL;
     ac_token *event_type = NULL;
-    if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, ERROR_UNEXPECTED_TOKEN, "expected rule identifier"))
+    if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, AC_ERROR_UNEXPECTED_TOKEN, "expected rule identifier"))
         return NULL;
     ac_token *id = ac_psr_previous_token(parser);
     if (MATCH(parser, TOKEN_COLON))
     {
-        if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, ERROR_UNEXPECTED_TOKEN, "expected event type"))
+        if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, AC_ERROR_UNEXPECTED_TOKEN, "expected event type"))
             return NULL;
         event_type = ac_psr_previous_token(parser);
     }
@@ -592,30 +592,30 @@ ac_statement *ac_psr_sequence(ac_parser *parser)
 {
     ac_statement *seq = NULL;
     uint32_t maxSpan = 0;
-    if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, ERROR_UNEXPECTED_TOKEN, "expected sequence identifier"))
+    if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, AC_ERROR_UNEXPECTED_TOKEN, "expected sequence identifier"))
         return NULL;
     ac_token *id = ac_psr_previous_token(parser);
     // optional maxSpan (if none or 0 specified, do not do a maxSpan check in VM)
     if (ac_psr_check(parser, TOKEN_COLON))
     {
         ac_psr_advance(parser);
-        if (!ac_psr_consume(parser, TOKEN_NUMBER, ERROR_UNEXPECTED_TOKEN, "expected number"))
+        if (!ac_psr_consume(parser, TOKEN_NUMBER, AC_ERROR_UNEXPECTED_TOKEN, "expected number"))
             return NULL;
         maxSpan = *(uint32_t *) ac_psr_previous_token(parser)->value;
         const char *unit_error = "expected time unit (s = seconds, m = minutes)";
-        if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, ERROR_UNEXPECTED_TOKEN, unit_error))
+        if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, AC_ERROR_UNEXPECTED_TOKEN, unit_error))
             return NULL;
         ac_token *unit = ac_psr_previous_token(parser);
         char *uval = ac_psr_previous_token(parser)->value;
         if (strlen(uval) != 1 || (uval[0] != 's' && uval[0] != 'm')) // require verbosity with seconds (must have 's')
         {
-            ac_psr_set_error(parser, unit, ERROR_UNEXPECTED_TOKEN, unit_error);
+            ac_psr_set_error(parser, unit, AC_ERROR_UNEXPECTED_TOKEN, unit_error);
             return NULL;
         }
         if (*uval == 'm')
             maxSpan *= SPAN_MINUTE;
     }
-    if (!ac_psr_consume(parser, TOKEN_LBRACKET, ERROR_UNEXPECTED_TOKEN, "expected '['"))
+    if (!ac_psr_consume(parser, TOKEN_LBRACKET, AC_ERROR_UNEXPECTED_TOKEN, "expected '['"))
         return NULL;
     seq = ac_expr_new_sequence(id, maxSpan);
     // accept rule body '{', scope indicator ':', or rule identifier only. Identifier is checked for type later.
@@ -632,7 +632,7 @@ ac_statement *ac_psr_sequence(ac_parser *parser)
             ac_token *ph = ac_psr_current_token(parser);
             if (MATCH(parser, TOKEN_COLON))
             {
-                if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, ERROR_UNEXPECTED_TOKEN, "expected event type"))
+                if (!ac_psr_consume(parser, TOKEN_IDENTIFIER, AC_ERROR_UNEXPECTED_TOKEN, "expected event type"))
                 {
                     ac_expr_free_sequence(seq);
                     return NULL;
@@ -657,7 +657,7 @@ ac_statement *ac_psr_sequence(ac_parser *parser)
     }
     if (!ac_psr_consume(parser,
                         TOKEN_RBRACKET,
-                        ERROR_INVALID_SYNTAX,
+                        AC_ERROR_INVALID_SYNTAX,
                         "invalid syntax"))
     {
         ac_expr_free_sequence(seq);
@@ -671,7 +671,7 @@ ac_statement *ac_psr_import(ac_parser *parser)
 {
     if (!ac_psr_consume(parser,
                         TOKEN_IDENTIFIER,
-                        ERROR_UNEXPECTED_TOKEN,
+                        AC_ERROR_UNEXPECTED_TOKEN,
                         "expected module name"))
         return NULL;
     return ac_expr_new_import(ac_psr_previous_token(parser));
@@ -687,7 +687,7 @@ ac_ast *ac_psr_ast(ac_parser *parser)
             statement = ac_psr_rule(parser, FALSE);
         else if (MATCH(parser, TOKEN_PRIVATE))
         {
-            if (!ac_psr_consume(parser, TOKEN_RULE, ERROR_UNEXPECTED_TOKEN, "expected rule"))
+            if (!ac_psr_consume(parser, TOKEN_RULE, AC_ERROR_UNEXPECTED_TOKEN, "expected rule"))
                 break;
             statement = ac_psr_rule(parser, TRUE);
         }
@@ -699,7 +699,7 @@ ac_ast *ac_psr_ast(ac_parser *parser)
             break;
         else
         {
-            ac_psr_set_error(parser, ac_psr_current_token(parser), ERROR_UNEXPECTED_TOKEN, "invalid statement");
+            ac_psr_set_error(parser, ac_psr_current_token(parser), AC_ERROR_UNEXPECTED_TOKEN, "invalid statement");
             break;
         }
         if (statement)
@@ -707,7 +707,7 @@ ac_ast *ac_psr_ast(ac_parser *parser)
         else
             break;
     }
-    if (parser->error.code != ERROR_SUCCESS)
+    if (parser->error.code != AC_ERROR_SUCCESS)
     {
         ac_expr_free_ast(program);
         return NULL;
@@ -727,7 +727,7 @@ ac_parser *ac_psr_new(ac_lexer *lexer)
     parser->token_count = lexer->token_count;
     parser->tokens = lexer->tokens;
 
-    parser->error.code = ERROR_SUCCESS;
+    parser->error.code = AC_ERROR_SUCCESS;
     parser->error.line = -1;
     return parser;
 }

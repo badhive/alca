@@ -4,3 +4,6 @@
 [submodule "libs/CLI11"]
 	path = libs/CLI11
 	url = https://github.com/CLIUtils/CLI11
+[submodule "libs/flatbuffers"]
+	path = libs/flatbuffers
+	url = https://github.com/google/flatbuffers

@@ -29,6 +29,14 @@
 
 #include <alca/utils.h>
 
+#ifndef LITTLE_ENDIAN
+#define LITTLE_ENDIAN *(char*)(&(int){1})
+#endif
+
+#ifndef BIG_ENDIAN
+#define BIG_ENDIAN LITTLE_ENDIAN == 0
+#endif
+
 /** Frees memory allocated by ac_ functions. Should only be used with functions that explicitly allow it.
  *
  * @param ptr pointer to dynamically allocated memory
@@ -62,13 +70,13 @@ void *ac_alloc(unsigned int size)
  */
 void *ac_realloc(void *ptr, unsigned int size)
 {
-    ptr = realloc(ptr, size);
-    if (ptr == NULL)
+    void *p2 = realloc(ptr, size);
+    if (p2 == NULL)
     {
         printf("allocation failed (could not re-allocate %d bytes)\n", size);
         exit(-1);
     }
-    return ptr;
+    return p2;
 }
 
 /** Extends a string by one byte. The resulting string can be freed with ac_free.
@@ -94,19 +102,9 @@ char *ac_str_extend(char *str, char c)
     return newStr;
 }
 
-uint32_t ac_u32be_to_u32le(uint32_t x)
+uint32_t ac_bswap(uint32_t x)
 {
     if (LITTLE_ENDIAN)
-        return x;
-    return (x >> 24) & 0x000000FF |
-           (x >> 8) & 0x0000FF00 |
-           (x << 8) & 0x00FF0000 |
-           (x << 24) & 0xFF000000;
-}
-
-uint32_t ac_u32le_to_u32be(uint32_t x)
-{
-    if (!LITTLE_ENDIAN)
         return x;
     return (x >> 24) & 0x000000FF |
            (x >> 8) & 0x0000FF00 |
@@ -137,7 +135,7 @@ char *__ac_path_join(int n, ...)
     newPath[len - 1] = '\0';
     for (int i = 0; i < count; i++)
     {
-        strcpy(newPath + idx, parts[i]);
+        strncpy(newPath + idx, parts[i], strlen(parts[i])+1);
         idx += strlen(parts[i]);
         // don't add separator on final path element
         if (i < count - 1)
@@ -153,7 +151,7 @@ ac_error ac_read_file(const char *filename, char **buffer, uint32_t *size)
 {
     FILE *file = fopen(filename, "rb");
     if (file == NULL)
-        return ERROR_COMPILER_FILE;
+        return AC_ERROR_COMPILER_FILE;
     fseek(file, 0, SEEK_END);
     size_t fsize = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -170,5 +168,5 @@ ac_error ac_read_file(const char *filename, char **buffer, uint32_t *size)
     }
     else
         free(fbuf);
-    return ERROR_SUCCESS;
+    return AC_ERROR_SUCCESS;
 }

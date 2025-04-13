@@ -233,7 +233,7 @@ struct ac_expr
 struct ac_statement
 {
     ac_stmt_type type;
-
+    const char *source_file_; // private
     union
     {
         struct

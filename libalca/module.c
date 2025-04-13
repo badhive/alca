@@ -31,11 +31,6 @@ ac_module *ac_module_create(const char *name, uint32_t version, ac_module_freer 
     return ctxo;
 }
 
-void ac_module_set_unmarshaller(ac_module *module, ac_module_event_unmarshaller unmarshal)
-{
-    return ac_context_object_set_unmarshaller(module, unmarshal);
-}
-
 void module_set_field_data_by_name(ac_module *parent, const char *field_name, ac_object *data)
 {
     ac_module *field = ac_module_get_field(parent, field_name);
@@ -48,8 +43,10 @@ void ac_module_set_uint32_field(ac_module *field, const char *field_name, uint32
     module_set_field_data_by_name(field, field_name, &(ac_object){ .i = value });
 }
 
-void ac_module_set_string_field(ac_module *field, const char *field_name, char *value)
+void ac_module_set_string_field(ac_module *field, const char *field_name, const char *value)
 {
+    if (value == NULL)
+        return;
     char *s = ac_alloc(strlen(value) + 1);
     strcpy(s, value);
     ac_object o = {0};
@@ -76,6 +73,8 @@ int ac_module_array_field_append(ac_module *field, int field_type, ac_object *da
 {
     if (field_type == AC_FIELD_TYPE_STRING)
     {
+        if (data->s == NULL)
+            return 0;
         char *s = ac_alloc(strlen(data->s) + 1);
         strcpy(s, data->s);
         data->s = s;

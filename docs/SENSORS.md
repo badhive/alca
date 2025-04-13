@@ -10,5 +10,5 @@ and modules in a provider-consumer model: there can be multiple consumers, but o
 You may wish to use one sensor that provides a range of event types, or multiple sensors that each specialise in a 
 particular event type - for example, by providing more granular / technical details regarding an event.
 
-More information about writing sensors and modules will be available at a later stage, as ALCA's flagship sensor is
+More information about writing sensors will be available at a later stage, as ALCA's flagship sensor is
 currently in active development.

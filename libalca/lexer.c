@@ -27,7 +27,7 @@
 
 #define lex_panic(lexer, ...) { \
     lex_error(lexer, __VA_ARGS__ ); \
-    lexer->status = ERROR_UNSUCCESSFUL; \
+    lexer->status = AC_ERROR_UNSUCCESSFUL; \
     return; \
 }
 
@@ -481,7 +481,7 @@ void lex_scanToken(ac_lexer *lexer)
                 lex_handleIdentifier(lexer, c); // treat keywords as identifiers until they match a keyword
             break;
     }
-    if (lexer->status != ERROR_SUCCESS)
+    if (lexer->status != AC_ERROR_SUCCESS)
         return;
     if (lex_isEof(lexer))
         lex_add_token(lexer, TOKEN_EOF, NULL);
@@ -492,7 +492,7 @@ ac_token **ac_lex_scan(ac_lexer *lexer)
     while (!lex_isEof(lexer))
     {
         lex_scanToken(lexer);
-        if (lexer->status != ERROR_SUCCESS)
+        if (lexer->status != AC_ERROR_SUCCESS)
             return NULL;
     }
     return lexer->tokens;

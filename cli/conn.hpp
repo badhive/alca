@@ -22,10 +22,12 @@
 #define _WIN32_WINNT 0x0501  /* Windows XP. */
 #endif
 #include <winsock2.h>
+#define neterrno WSAGetLastError()
 #else
 typedef int SOCKET;
-#define INVALID_SOCKET -1
+#define INVALID_SOCKET (~0)
 #define SOCKET_ERROR -1
+#define neterrno errno
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h> // close()
@@ -40,5 +42,7 @@ int conn_api_shutdown();
 SOCKET conn_connect(const char *address, uint16_t port);
 
 void conn_close(SOCKET conn);
+
+int conn_last_error();
 
 #endif //AC_CONN_H

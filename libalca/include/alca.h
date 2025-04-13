@@ -27,6 +27,7 @@ extern "C" {
 #include "alca/packet.h"
 #include "alca/utils.h"
 #include "alca/vm.h"
+#include "alca/defaults.h"
 
 #ifdef __cplusplus
 }

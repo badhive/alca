@@ -141,24 +141,24 @@ int checker_valid_call(ac_checker *checker, ac_expr *call, ac_context_object *fu
         else if (t == TOKEN_FALSE || t == TOKEN_TRUE)
             arg_types = ac_str_extend(arg_types, 'b');
         else
-            report_error(checker, call->u.call.paren, ERROR_UNEXPECTED_TYPE, FALSE,
+            report_error(checker, call->u.call.paren, AC_ERROR_UNEXPECTED_TYPE, FALSE,
                      "argument must be string, integer or boolean");
     }
     unsigned int count;
     const char *types;
     ac_error error = ac_context_validate_function_call(function, arg_types, &count, &types);
     if (arg_types) ac_free(arg_types);
-    if (error != ERROR_SUCCESS)
+    if (error != AC_ERROR_SUCCESS)
     {
         char *msg = ac_alloc(32);
-        if (error == ERROR_BAD_CALL)
+        if (error == AC_ERROR_BAD_CALL)
             sprintf(msg, "expected %d arguments", count);
-        else if (error == ERROR_UNEXPECTED_TYPE)
+        else if (error == AC_ERROR_UNEXPECTED_TYPE)
         {
-            report_error(checker, call->u.call.paren, ERROR_BAD_CALL, FALSE,
+            report_error(checker, call->u.call.paren, AC_ERROR_BAD_CALL, FALSE,
                          "expected argument types '%s', got '%s'", types, arg_types);
         } else
-            report_error(checker, call->u.call.paren, ERROR_BAD_CALL, FALSE,
+            report_error(checker, call->u.call.paren, AC_ERROR_BAD_CALL, FALSE,
                      "not a function");
     }
     return TRUE;
@@ -174,7 +174,7 @@ ac_token_type resolve_identifier_type_from_context(ac_checker *checker, struct c
     if (!subobject)
     {
         ac_context_object_info(object, &name, &type);
-        report_error(checker, node, ERROR_UNKNOWN_FIELD, TOKEN_EOF, "unknown field '%s' for %s", node->name, name);
+        report_error(checker, node, AC_ERROR_UNKNOWN_FIELD, TOKEN_EOF, "unknown field '%s' for %s", node->name, name);
     }
     ac_context_object_info(subobject, &name, &type);
     // if object is used on its own without accessing fields / indices (no next pointer)
@@ -182,15 +182,15 @@ ac_token_type resolve_identifier_type_from_context(ac_checker *checker, struct c
     {
         if (type & AC_FIELD_TYPE_ARRAY)
         {
-            report_error(checker, node, ERROR_BAD_LITERAL, TOKEN_EOF, "item in '%s' cannot be used as a literal",
+            report_error(checker, node, AC_ERROR_BAD_LITERAL, TOKEN_EOF, "item in '%s' cannot be used as a literal",
                          node->name);
         }
         if (type & AC_FIELD_TYPE_FUNCTION)
         {
-            report_error(checker, node, ERROR_BAD_LITERAL, TOKEN_EOF, "%s's return value cannot be used as a literal",
+            report_error(checker, node, AC_ERROR_BAD_LITERAL, TOKEN_EOF, "%s's return value cannot be used as a literal",
                          node->name);
         }
-        report_error(checker, node, ERROR_BAD_LITERAL, TOKEN_EOF, "'%s' cannot be used as a literal", node->name);
+        report_error(checker, node, AC_ERROR_BAD_LITERAL, TOKEN_EOF, "'%s' cannot be used as a literal", node->name);
     }
     // if an item type is EXPR_FIELD, then it is being used as a literal (no call, index, property etc. after its name).
     // this is not allowed for arrays, objects or functions.
@@ -198,14 +198,14 @@ ac_token_type resolve_identifier_type_from_context(ac_checker *checker, struct c
     {
         if (type & AC_FIELD_TYPE_ARRAY || type & AC_FIELD_TYPE_STRUCT || type & AC_FIELD_TYPE_FUNCTION)
         {
-            report_error(checker, node, ERROR_BAD_LITERAL, TOKEN_EOF, "'%s' cannot be used as a literal", node->name);
+            report_error(checker, node, AC_ERROR_BAD_LITERAL, TOKEN_EOF, "'%s' cannot be used as a literal", node->name);
         }
         node->expr->u.field.identifier_type = type;
     } else if (node->type == EXPR_INDEX) // if the index is performed on non-array
     {
         if (!(type & AC_FIELD_TYPE_ARRAY))
         {
-            report_error(checker, node, ERROR_NOT_SUBSCRIPTABLE, TOKEN_EOF, "'%s' is not subscriptable", node->name);
+            report_error(checker, node, AC_ERROR_NOT_SUBSCRIPTABLE, TOKEN_EOF, "'%s' is not subscriptable", node->name);
         }
         node->expr->u.index.item_type = type;
         node->extra->u.field.identifier_type = type;
@@ -214,11 +214,11 @@ ac_token_type resolve_identifier_type_from_context(ac_checker *checker, struct c
         // if the call is performed on non-function
         if (!(type & AC_FIELD_TYPE_FUNCTION))
         {
-            report_error(checker, node, ERROR_BAD_CALL, TOKEN_EOF, "'%s' is not callable", node->name);
+            report_error(checker, node, AC_ERROR_BAD_CALL, TOKEN_EOF, "'%s' is not callable", node->name);
         }
         if (!checker_valid_call(checker, node->expr, subobject))
         {
-            report_error(checker, node, ERROR_UNEXPECTED_TYPE, TOKEN_EOF, "invalid arguments for function '%s'",
+            report_error(checker, node, AC_ERROR_UNEXPECTED_TYPE, TOKEN_EOF, "invalid arguments for function '%s'",
                          node->name);
         }
         node->expr->u.call.return_type = type;
@@ -255,12 +255,12 @@ ac_token_type resolve_identifier_type(ac_checker *checker, ac_expr *expr)
             {
                 // catch recursive rule calls
                 if (checker->current_rule && strcmp(item->name, checker->current_rule->u.rule.name->value) == 0)
-                    report_error(checker, expr_parent->u.literal.value, ERROR_RECURSION,
+                    report_error(checker, expr_parent->u.literal.value, AC_ERROR_RECURSION,
                              TOKEN_EOF,
                              "rule cannot reference itself");
                 return TOKEN_TRUE; // rules return boolean
             }
-            report_error(checker, expr->u.literal.value, TOKEN_EOF, ERROR_BAD_LITERAL, "cannot use name as literal");
+            report_error(checker, expr->u.literal.value, TOKEN_EOF, AC_ERROR_BAD_LITERAL, "cannot use name as literal");
         }
     }
     while (expr_parent->type != EXPR_LITERAL) // a literal expression means we reached the module / global name
@@ -284,7 +284,7 @@ ac_token_type resolve_identifier_type(ac_checker *checker, ac_expr *expr)
                     object->type != EXPR_CALL &&
                     object->type != EXPR_INDEX)
                     report_error(checker, expr_parent->u.field.field_name,
-                             ERROR_FIELD_ACCESS,
+                             AC_ERROR_FIELD_ACCESS,
                              TOKEN_EOF, "cannot get property of object");
                 name = expr_parent->u.field.field_name->value;
                 line = expr_parent->u.field.field_name->line;
@@ -301,7 +301,7 @@ ac_token_type resolve_identifier_type(ac_checker *checker, ac_expr *expr)
                     if (callee->u.field.object->type != EXPR_LITERAL || callee->u.field.object->u.literal.value->type !=
                         TOKEN_IDENTIFIER)
                         report_error(checker, expr->u.call.paren,
-                                 ERROR_BAD_CALL, TOKEN_EOF,
+                                 AC_ERROR_BAD_CALL, TOKEN_EOF,
                                  "methods and anonymous functions not supported");
                     name = callee->u.field.field_name->value;
                     // since we skip the callee name, we need to have it saved in extra
@@ -309,10 +309,10 @@ ac_token_type resolve_identifier_type(ac_checker *checker, ac_expr *expr)
                     expr_parent = callee->u.field.object;
                 } else if (callee->type == EXPR_LITERAL) // top-level functions not supported
                 {
-                    report_error(checker, callee->u.call.paren, ERROR_BAD_CALL, TOKEN_EOF, "literal is not callable");
+                    report_error(checker, callee->u.call.paren, AC_ERROR_BAD_CALL, TOKEN_EOF, "literal is not callable");
                 } else // ensure that callees are either fields or literals only
                     report_error(checker, expr->u.call.paren,
-                             ERROR_BAD_CALL, TOKEN_EOF,
+                             AC_ERROR_BAD_CALL, TOKEN_EOF,
                              "methods and anonymous functions not supported");
                 break;
             }
@@ -321,7 +321,7 @@ ac_token_type resolve_identifier_type(ac_checker *checker, ac_expr *expr)
                 ac_expr *array = expr_parent->u.index.object;
                 if (array->type != EXPR_FIELD)
                     report_error(checker, expr_parent->u.index.bracket,
-                             ERROR_NOT_SUBSCRIPTABLE, TOKEN_EOF, "only array objects can be indexed");
+                             AC_ERROR_NOT_SUBSCRIPTABLE, TOKEN_EOF, "only array objects can be indexed");
                 line = expr_parent->u.index.bracket->line;
                 name = array->u.field.field_name->value;
                 // since we skip the array name, we need to save it in extra
@@ -345,7 +345,7 @@ ac_token_type resolve_identifier_type(ac_checker *checker, ac_expr *expr)
     ac_context_object *object;
 
     if (expr_parent->u.literal.value->type != TOKEN_IDENTIFIER)
-        report_error(checker, expr_parent->u.literal.value, ERROR_FIELD_ACCESS, TOKEN_EOF,
+        report_error(checker, expr_parent->u.literal.value, AC_ERROR_FIELD_ACCESS, TOKEN_EOF,
                  "cannot get property of literal");
 
 
@@ -356,17 +356,17 @@ ac_token_type resolve_identifier_type(ac_checker *checker, ac_expr *expr)
         if (ac_context_get(checker->ctx, name))
         {
             // if module exists but not in rule scope
-            report_error(checker, expr_parent->u.literal.value, ERROR_UNKNOWN_IDENTIFIER, TOKEN_EOF,
+            report_error(checker, expr_parent->u.literal.value, AC_ERROR_UNKNOWN_IDENTIFIER, TOKEN_EOF,
                          "'%s' event not in rule scope", name);
         }
         // if no module with that name exists
-        report_error(checker, expr_parent->u.literal.value, ERROR_UNKNOWN_IDENTIFIER, TOKEN_EOF,
+        report_error(checker, expr_parent->u.literal.value, AC_ERROR_UNKNOWN_IDENTIFIER, TOKEN_EOF,
                      "undefined symbol '%s'", name);
     }
     if (!object)
     {
         // if no module with that name exists
-        report_error(checker, expr_parent->u.literal.value, ERROR_UNKNOWN_IDENTIFIER, TOKEN_EOF,
+        report_error(checker, expr_parent->u.literal.value, AC_ERROR_UNKNOWN_IDENTIFIER, TOKEN_EOF,
                      "unknown identifier '%s'", name);
     }
     ret = resolve_identifier_type_from_context(checker, head, object);
@@ -457,7 +457,7 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
         {
             ac_token_type type = resolve_type(checker, expr->u.index.index);
             if (type != TOKEN_NUMBER)
-                report_error(checker, expr->u.index.bracket, ERROR_UNEXPECTED_TYPE, TOKEN_EOF,
+                report_error(checker, expr->u.index.bracket, AC_ERROR_UNEXPECTED_TYPE, TOKEN_EOF,
                          "index must be an integer");
             return resolve_identifier_type(checker, expr);
         }
@@ -476,11 +476,11 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
                     // ext stores the event name for the rule
                     if (item->ext == NULL && evt != NULL || item->ext != NULL && evt == NULL)
                     {
-                        report_error(checker, expr->u.literal.value, ERROR_BAD_CALL, TOKEN_EOF,
+                        report_error(checker, expr->u.literal.value, AC_ERROR_BAD_CALL, TOKEN_EOF,
                             "a referenced rule's event type must match the callee's");
                     }
                     if (item->ext && strcmp(item->ext, checker->current_rule->u.rule.event->value) != 0)
-                        report_error(checker, expr->u.literal.value, ERROR_BAD_CALL, TOKEN_EOF,
+                        report_error(checker, expr->u.literal.value, AC_ERROR_BAD_CALL, TOKEN_EOF,
                             "a referenced rule's event type must match the callee's");
                     return TOKEN_TRUE;
                 }
@@ -504,11 +504,11 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
                 // true-false and string-regex are valid
                 if (!(t1 == TOKEN_TRUE && t2 == TOKEN_FALSE || t2 == TOKEN_TRUE && t1 == TOKEN_FALSE) &&
                     !(t1 == TOKEN_STRING && t2 == TOKEN_REGEX))
-                report_error(checker, expr->u.binary.op, ERROR_BAD_OPERATION, TOKEN_EOF,
+                report_error(checker, expr->u.binary.op, AC_ERROR_BAD_OPERATION, TOKEN_EOF,
                          "invalid operation (type mismatch)");
             }
             if (!valid_operation(t1, t2, expr->u.binary.op->type, &res))
-                report_error(checker, expr->u.binary.op, ERROR_BAD_OPERATION, TOKEN_EOF, "incompatible operator");
+                report_error(checker, expr->u.binary.op, AC_ERROR_BAD_OPERATION, TOKEN_EOF, "incompatible operator");
             expr->u.binary.operand_type = t1;
             return res;
         }
@@ -520,7 +520,7 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
             ac_token_type op = expr->u.unary.op->type;
             ac_token_type res = TOKEN_EOF;
             if (!valid_operation(t1, TOKEN_EOF, op, &res))
-                report_error(checker, expr->u.unary.op, ERROR_BAD_OPERATION, TOKEN_EOF,
+                report_error(checker, expr->u.unary.op, AC_ERROR_BAD_OPERATION, TOKEN_EOF,
                          "incompatible unary operator");
             return res;
         }
@@ -533,12 +533,12 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
             if (t2 == TOKEN_EOF)
                 return TOKEN_EOF;
             if (t1 != t2 || t1 != TOKEN_NUMBER)
-                report_error(checker, expr->u.range.ivar, ERROR_BAD_OPERATION, TOKEN_EOF,
+                report_error(checker, expr->u.range.ivar, AC_ERROR_BAD_OPERATION, TOKEN_EOF,
                     "start / end range values must be integers");
             char *name = expr->u.range.ivar->value;
             if (hashmap_get(checker->env, &(ac_context_env_item){.name = expr->u.range.ivar->value}))
             {
-                report_error(checker, expr->u.range.ivar, ERROR_REDEFINED, TOKEN_EOF,
+                report_error(checker, expr->u.range.ivar, AC_ERROR_REDEFINED, TOKEN_EOF,
                     "identifier '%s' has already been defined", name);
             }
             // only in scope of enclosed condition
@@ -548,7 +548,7 @@ ac_token_type resolve_type(ac_checker *checker, ac_expr *expr)
             if (t3 == TOKEN_EOF)
                 return TOKEN_EOF;
             if (t3 != TOKEN_TRUE && t3 != TOKEN_FALSE)
-                report_error(checker, expr->u.range.ivar, ERROR_UNEXPECTED_TYPE, TOKEN_EOF,
+                report_error(checker, expr->u.range.ivar, AC_ERROR_UNEXPECTED_TYPE, TOKEN_EOF,
                     "expected boolean condition in range expression")
             return TOKEN_TRUE;
         }
@@ -563,7 +563,7 @@ int check_type(ac_checker *checker, ac_expr *expr, int line)
         return FALSE;
     if (type != TOKEN_TRUE && type != TOKEN_FALSE)
     {
-        checker_errorf(checker, line, ERROR_UNEXPECTED_TYPE, "rule result is not boolean");
+        checker_errorf(checker, line, AC_ERROR_UNEXPECTED_TYPE, "rule result is not boolean");
         return FALSE;
     }
     return TRUE;
@@ -588,7 +588,7 @@ int checker_check_rule(ac_checker *checker, ac_statement *stmt, int is_seq_rule)
         // check if rule is already defined
         if (hashmap_get(checker->env, &(ac_context_env_item){.name = stmt->u.rule.name->value}))
         {
-            checker_errorf(checker, stmt->u.rule.name->line, ERROR_REDEFINED, "name '%s' already defined",
+            checker_errorf(checker, stmt->u.rule.name->line, AC_ERROR_REDEFINED, "name '%s' already defined",
                            (char *) stmt->u.rule.name->value);
             ret = FALSE;
             goto end;
@@ -609,17 +609,17 @@ int checker_check_rule(ac_checker *checker, ac_statement *stmt, int is_seq_rule)
     }
     if (stmt->u.rule.event)
     {
-        ac_module_load_callback callback = NULL;
-        if (!ac_context_get_module(checker->ctx, stmt->u.rule.event->value, &callback))
+        ac_module_table_entry module = {0};
+        if (!ac_context_get_module(checker->ctx, stmt->u.rule.event->value, &module))
         {
-            checker_errorf(checker, stmt->u.rule.event->line, ERROR_MODULE, "module %s not included",
+            checker_errorf(checker, stmt->u.rule.event->line, AC_ERROR_MODULE, "module %s does not exist",
                 stmt->u.rule.event->value);
             ret = FALSE;
             goto end;
         }
         // load module into context, brings into rule scope
         checker->rule_ctx = ac_context_new();
-        ac_context_add_module_load_callback(checker->rule_ctx, stmt->u.rule.event->value, callback);
+        ac_context_add_module(checker->rule_ctx, &module);
         ac_context_load_modules(checker->rule_ctx);
     }
     if (!check_type(checker, stmt->u.rule.condition, line))
@@ -638,7 +638,7 @@ int checker_check_sequence(ac_checker *checker, ac_statement *stmt)
 {
     if (hashmap_get(checker->env, &(ac_context_env_item){.name = stmt->u.sequence.name->value}))
     {
-        checker_errorf(checker, stmt->u.sequence.name->line, ERROR_REDEFINED, "name '%s' already defined",
+        checker_errorf(checker, stmt->u.sequence.name->line, AC_ERROR_REDEFINED, "name '%s' already defined",
                        (char *) stmt->u.sequence.name->value);
         return FALSE;
     }
@@ -661,7 +661,7 @@ int checker_check_sequence(ac_checker *checker, ac_statement *stmt)
             // make sure rules from other files cannot be used in a sequence
             if (!rule_id || rule_id->type != STMT_RULE || strcmp(rule_id->src, checker->ast->path) != 0)
             {
-                checker_errorf(checker, line, ERROR_UNKNOWN_IDENTIFIER, "undefined rule '%s' in sequence",
+                checker_errorf(checker, line, AC_ERROR_UNKNOWN_IDENTIFIER, "undefined rule '%s' in sequence",
                                (char *) rule->u.rule.name->value);
                 return FALSE;
             }

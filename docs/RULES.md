@@ -7,12 +7,12 @@ the received event's properties. Here's an example:
 event file
 
 rule detect_foo_ransomware : file {
-    file.action == file.FILE_RENAME and file.new_name iendswith ".foo"
+    file.action == file.FileRename and file.new_name iendswith ".foo"
 } 
 ```
 
 Let's break it down:
-1. The rule first checks if the file action matches the user-defined enum `FILE_RENAME` (meaning, a file was renamed).
+1. The rule first checks if the file action matches the user-defined enum `FileRename` (meaning, a file was renamed).
    If this condition is true, then the second condition (on the right hand side of `and`) is evaluated.
 2. The rule then does a **case-insensitive** check on the new file name to see if it ends with ".foo" (int other words, if
    the extension has changed). If both these conditions are true, then the rule is flagged as true, and we receive a
@@ -49,9 +49,9 @@ referenced rule, and returns a boolean value that can be used in boolean operati
 ```
 event file
 
-private rule my_rule_a : file { file.name == "of_interest.txt" }
+private rule my_rule_a : file { file.name == "of_interest" }
 
-rule my_rule_b : file { my_rule_a and file.size_in_bytes > 10000 }
+rule my_rule_b : file { my_rule_a and not file.is_directory }
 ```
 
 In this case, `my_rule_b` will trigger if a file's name is "of_interest.txt" AND its size is greater than 10,000 bytes.
@@ -83,14 +83,14 @@ ALCA rules contain a variety of operators that can be used when querying event d
 
 ### Bitwise Operators
 
-| Operator | Description     | Example usage                          |
-|----------|-----------------|----------------------------------------|
-| `\|`     | Bitwise OR      | `0x10 \| 0x01`                         |
-| `^`      | Bitwise XOR     | `0x10 ^ 0x01`                          |
-| `&`      | Bitwise AND     | `file.PERMS & file.FILE_READONLY != 0` |
-| `~`      | Bitwise NOT     | `~23`                                  |
-| `<<`     | Bit-shift left  | `0x01 << 8`                            |
-| `>>`     | Bit-shift right | `0x10 >> 8`                            |
+| Operator | Description     | Example usage      |
+|----------|-----------------|--------------------|
+| `\|`     | Bitwise OR      | `0x10 \| 0x01`     |
+| `^`      | Bitwise XOR     | `0x10 ^ 0x01`      |
+| `&`      | Bitwise AND     | `0x10 & 0x10 != 0` |
+| `~`      | Bitwise NOT     | `~23`              |
+| `<<`     | Bit-shift left  | `0x01 << 8`        |
+| `>>`     | Bit-shift right | `0x10 >> 8`        |
 
 ### String Length Operator
 
@@ -137,15 +137,14 @@ ALCA has support for iterator expressions. These iterate through an array, doing
 If a specified number of conditions are met, then the expression evaluates to true. They behave like and resemble [YARA's 
 iterators](https://yara.readthedocs.io/en/stable/writingrules.html#iterators) prior to v4.0.
 
-For example, the following expression checks that for **all** sections of a file, the section name either begins with 
-".vmp" + a decimal digit, or has the name ".text".
+For example, the following expression checks that for **all** functions of a process' call stack, none of them
+is "NtAllocateVirtualMemory"". Effectively, this triggers if NtAllocateVirtualMemory isn't in a process' call stack.
 
 ```
-rule check_vmprotect : file {
-   file.num_sections >= 3 and
-   for 3 i in (0..file.num_sections) : (
-      file.sections[i].name matches /\.vmp[0-9]/ or
-      file.sections[i].name == ".text"
+rule check_call_stack : process {
+   process.action == process.AllocRemote and
+   for all i in (0..process.call_stack_size) : (
+      not process.call_stack[i] icontains "NtAllocateVirtualMemory"
    )
 }
 ```

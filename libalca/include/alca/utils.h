@@ -39,18 +39,13 @@
 #define AC_MAX_PATH_COUNT 32
 #define lengthof(x) (long)(sizeof(x)/sizeof(x[0]))
 
-#ifndef LITTLE_ENDIAN
-#define LITTLE_ENDIAN *(char*)(&(int){1})
-#endif
+#define netint(a) ac_bswap(a)
 
-#define AC_VERSION( maj, min, pch ) \
-((maj << 24) & 0xFF000000) | ((min << 16) & 0x00FF0000) | (pch & 0x0000FFFF)
+#define AC_VERSION( maj, min, pch ) (\
+((maj << 24) & 0xFF000000) | ((min << 16) & 0x00FF0000) | (pch & 0x0000FFFF))
 
 #define ALCA_VERSION AC_VERSION( 0, 0, 1 )
-#define ALCA_MAGIC 0x41434c4
-
-#define b2l(a) ac_u32be_to_u32le(a)
-#define l2b(a) ac_u32le_to_u32be(a)
+#define ALCA_MAGIC netint(0x41434c41)
 
 #include <stdint.h>
 #include <alca/errors.h>
@@ -71,9 +66,7 @@ void *ac_realloc(void *ptr, unsigned int size);
 
 char *ac_str_extend(char *str, char c);
 
-uint32_t ac_u32be_to_u32le(uint32_t x);
-
-uint32_t ac_u32le_to_u32be(uint32_t x);
+uint32_t ac_bswap(uint32_t x);
 
 ac_error ac_read_file(const char *filename, char **buffer, uint32_t *size);
 

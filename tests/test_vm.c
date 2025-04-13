@@ -54,19 +54,20 @@ void test_vm_run_complex(ac_test *t)
     const char *path = AC_PATH_JOIN("tests", "data", "vm_complex.alca");
     ac_compiler *compiler = ac_compiler_new();
     ac_error error = ac_compiler_add_file(compiler, path);
-    ac_test_assert_int32_eq(t, error, ERROR_SUCCESS);
-    ac_compiler_include_module(compiler, "file", ac_test_module_file_callback);
+    ac_test_assert_int32_eq(t, error, AC_ERROR_SUCCESS);
+    ac_module_table_entry file_module = ac_test_file_module();
+    ac_compiler_include_module(compiler, &file_module);
     error = ac_compiler_compile(compiler, NULL);
-    if (error != ERROR_SUCCESS)
+    if (error != AC_ERROR_SUCCESS)
     {
         for (int i = 0; i < compiler->error_count; i++)
             printf("ERROR %d: %s\n", compiler->errors[i].code, compiler->errors[i].message);
     }
-    ac_test_assert_int32_eq(t, error, ERROR_SUCCESS);
+    ac_test_assert_int32_eq(t, error, AC_ERROR_SUCCESS);
     ac_vm *vm = ac_vm_new(compiler);
     ac_vm_add_trigger_callback(vm, callback);
     error = ac_vm_exec(vm, fakedata, sizeof(fakedata), NULL);
-    ac_test_assert_int32_eq(t, error, ERROR_SUCCESS);
+    ac_test_assert_int32_eq(t, error, AC_ERROR_SUCCESS);
     ac_test_assert_int32_eq(t, ac_vm_get_trigger_count(vm), 2);
 }
 

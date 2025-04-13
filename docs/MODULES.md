@@ -22,8 +22,8 @@ Every module is named, and requires 3 functions with the following signatures:
 
 ALCA's in-built modules use [FlatBuffers](https://github.com/google/flatbuffers) to receive data from sensors.
 To ensure backwards-compatibility with existing rules, it is **strongly recommended** to only modify existing
-modules by adding new fields to the FlatBuffers schema. Implementing new event types using FlatBuffers is recommended
-but not required.
+modules by adding new fields to the FlatBuffers schema (`alca/libalca/modules/governor.fbs`) and module source files.
+Implementing new event types using FlatBuffers is recommended but not required.
 
 ### Loader
 
@@ -139,12 +139,9 @@ recognised by the engine.
    ```
    MODULE(<module_name>)
    ```
-2. Add your source file(s) to `ALCA_SOURCES` in CMakeLists.txt.
+2. Add your source file(s) to `ALCA_MODULES` in CMakeLists.txt.
    ```cmake
-   set(ALCA_SOURCES libalca/lexer.c
-        libalca/utils.c
-        libalca/parser.c
-        libalca/expr.c,
+   set(ALCA_MODULES libalca/modules/file.c,
         ...
         path/to/your/module.c)
    ```
@@ -152,6 +149,3 @@ recognised by the engine.
    ```shell
    cmake -B build . && cmake --build build/ --target alca
    ```
-
-More information about writing sensors and modules will be available at a later stage, as ALCA's flagship sensor is
-currently in active development.

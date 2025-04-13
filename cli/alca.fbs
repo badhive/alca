@@ -1,0 +1,90 @@
+// IDL file for standard ALCA sensors.
+
+namespace Sensor;
+
+enum FileAction : byte {
+    FileCreate,
+    FileRename,
+    FileDelete,
+    FileModify
+}
+
+table FileEvent {
+    action:FileAction;
+
+    name:string;
+    path:string;
+    // directory that it resides in
+    directory:string;
+    extension:string;
+
+    // rename-specific
+    new_name:string;
+    is_directory:bool;
+}
+
+enum NetworkAction : byte {
+    NetAccept,
+    NetConnect,
+    NetDisconnect,
+    NetSend,
+    NetReceive
+}
+
+table NetworkEvent {
+    action:NetworkAction;
+    tcp:bool;
+    udp:bool;
+    ipv6:bool;
+    local_addr:string;
+    local_port:short;
+    remote_addr:string;
+    remote_port:short;
+
+    // send / receive specific
+    packet_size:int;
+}
+
+enum ProcessAction : byte {
+    ProcessStart,
+    ProcessEnd,
+    CreateRemoteThread,
+    CreateLocalThread,
+    TerminateLocalThread,
+    TerminateRemoteThread,
+    ImageLoad,
+    ImageUnload,
+    AllocLocal,
+    AllocRemote
+}
+
+table ProcessEvent {
+    action:ProcessAction;
+
+    // subject process info
+    pid:int;
+    name:string;
+
+    // running process info
+    self_pid:int;
+
+    // action = ProcessStart / ProcessEnd
+    command_line:string;
+
+    // action = ImageLoad / ImageUnload
+    image_name:string;
+}
+
+enum RegistryAction : byte {
+    RegOpenKey,
+    RegCreateKey,
+    RegSetValue,
+    RegDeleteKey,
+    RegDeleteValue,
+}
+
+table RegistryEvent {
+    action:RegistryAction;
+    key_path:string;
+    value_name:string;
+}
