@@ -133,6 +133,9 @@ ac_compiler *ac_compiler_new()
     compiler->builder->ctx = compiler->ctx;
 
     ac_compiler_include_module(compiler, AC_DEFAULT_MODULE(file));
+    ac_compiler_include_module(compiler, AC_DEFAULT_MODULE(network));
+    ac_compiler_include_module(compiler, AC_DEFAULT_MODULE(process));
+    ac_compiler_include_module(compiler, AC_DEFAULT_MODULE(registry));
     return compiler;
 }
 
