@@ -16,8 +16,15 @@
 
 #if defined(_WIN32)
 #define PATH_SEPARATOR '\\'
+#if defined(__GCC__)
+#include <sys/time.h>
+#elif defined(_MSC_VER)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <stdint.h>
+#endif
 #else
-    #define PATH_SEPARATOR '/'
+#define PATH_SEPARATOR '/'
 #endif
 
 #include <stdarg.h>
@@ -88,7 +95,7 @@ void *ac_realloc(void *ptr, unsigned int size)
  */
 char *ac_str_extend(char *str, char c)
 {
-    size_t len = 1;
+    int len = 1;
     char *newStr = NULL;
     if (!str)
         newStr = ac_alloc(len + 1);
@@ -116,7 +123,7 @@ char *__ac_path_join(int n, ...)
 {
     int count = 0;
     char *parts[AC_MAX_PATH_COUNT];
-    unsigned len = 0;
+    size_t len = 0;
     unsigned idx = 0;
     va_list args;
     va_start(args, n);
@@ -153,7 +160,7 @@ ac_error ac_read_file(const char *filename, char **buffer, uint32_t *size)
     if (file == NULL)
         return AC_ERROR_COMPILER_FILE;
     fseek(file, 0, SEEK_END);
-    size_t fsize = ftell(file);
+    uint32_t fsize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
     char *fbuf = ac_alloc(fsize+1);
@@ -169,4 +176,30 @@ ac_error ac_read_file(const char *filename, char **buffer, uint32_t *size)
     else
         free(fbuf);
     return AC_ERROR_SUCCESS;
+}
+
+int ac_gettimeofday(struct ac_timeval* tp, struct timezone* tzp)
+{
+#if defined(__GCC__) || !defined(WIN32)
+    return gettimeofday((struct timeval*)tp, tzp);
+#else
+    // Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
+    // This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
+    // until 00:00:00 January 1, 1970 
+    static const uint64_t EPOCH = ((uint64_t)116444736000000000ULL);
+    
+    SYSTEMTIME system_time;
+    FILETIME file_time;
+    ULARGE_INTEGER uLarge;
+
+    GetSystemTime(&system_time);
+    GetSystemTimePreciseAsFileTime(&file_time);
+    uLarge.LowPart = file_time.dwLowDateTime;
+    uLarge.HighPart = file_time.dwHighDateTime;
+
+    tp->tv_sec = (long)((uLarge.QuadPart - EPOCH) / 10000000L);
+    tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
+
+    return 0;
+#endif
 }

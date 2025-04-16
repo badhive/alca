@@ -50,6 +50,12 @@
 #include <stdint.h>
 #include <alca/errors.h>
 
+ // Why is this in winsock
+typedef struct ac_timeval {
+    long tv_sec;
+    long tv_usec;
+} ac_timeval;
+
 /** Joins any number path elements into a single path. The resulting path can be freed with ac_free.
  * Does not take into account / resolve relative elements.
  *
@@ -71,5 +77,7 @@ uint32_t ac_bswap(uint32_t x);
 ac_error ac_read_file(const char *filename, char **buffer, uint32_t *size);
 
 char *__ac_path_join(int, ...);
+
+int ac_gettimeofday(struct ac_timeval* tp, struct timezone* tzp);
 
 #endif //AC_UTILS_H

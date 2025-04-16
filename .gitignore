@@ -6,3 +6,4 @@ Makefile
 build-*
 scripts
 build/
+CMakeSettings.json

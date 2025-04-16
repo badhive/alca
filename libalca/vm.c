@@ -22,7 +22,6 @@
 #include <alca/arena.h>
 #include <alca/utils.h>
 #include <alca/vm.h>
-#include <sys/time.h>
 
 #include <pcre2.h>
 #include "hashmap.h"
@@ -81,7 +80,7 @@ typedef struct vm_monrule
 {
     uint32_t idx;
     char *name;
-    struct timeval trigger;
+    struct ac_timeval trigger;
 } vm_monrule;
 
 typedef struct vm_sequence
@@ -176,7 +175,7 @@ ac_vm *ac_vm_new(ac_compiler *compiler)
 
     // construct sequence table
     vm->sequence_table = ac_alloc(compiler->nsequences * sizeof(vm_sequence));
-    for (int i = 0; i < compiler->nsequences; i++)
+    for (uint32_t i = 0; i < compiler->nsequences; i++)
     {
         ac_sequence_entry *entry = &compiler->sequence_table[i];
         vm->sequence_table[i].monitored_rules = hashmap_new(
@@ -206,7 +205,7 @@ ac_vm *ac_vm_new(ac_compiler *compiler)
         modinfo_cmp,
         NULL,
         NULL);
-    for (int i = 0; i < compiler->nmodules; i++)
+    for (uint32_t i = 0; i < compiler->nmodules; i++)
     {
         char *modname = ac_arena_get_string(compiler->data_arena, compiler->module_table[i].name_offset);
         hashmap_set(vm->modules, &(modinfo){compiler->module_table[i].ordinal, modname});
@@ -224,7 +223,7 @@ int ac_vm_add_trigger_callback(ac_vm *vm, ac_trigger_callback cb)
 
 void vm_report_triggered(ac_vm *vm, int type, char *name, time_t at, void *exec_context)
 {
-    for (int i = 0; i < vm->ncb; i++)
+    for (uint32_t i = 0; i < vm->ncb; i++)
     {
         if (vm->cb[i])
             vm->cb[i](type, name, at, exec_context);
@@ -234,11 +233,11 @@ void vm_report_triggered(ac_vm *vm, int type, char *name, time_t at, void *exec_
 
 // notifies sequences monitoring rule at `rule_idx` about the time the rule was triggered.
 // if the trigger times are ascending, then rules triggered sequentially so sequence is TRUE
-void vm_update_sequences(ac_vm *vm, uint32_t rule_index, struct timeval trigger_time, void *exec_context)
+void vm_update_sequences(ac_vm *vm, uint32_t rule_index, struct ac_timeval trigger_time, void *exec_context)
 {
-    struct timeval at = trigger_time;
+    struct ac_timeval at = trigger_time;
     vm_monrule rule = {rule_index, vm->current_rule, trigger_time};
-    for (int i = 0; i < vm->cpl->nsequences; i++)
+    for (uint32_t i = 0; i < vm->cpl->nsequences; i++)
     {
         vm_sequence *s = &vm->sequence_table[i];
         if (hashmap_get(s->monitored_rules, &rule)) // if sequence is monitoring this rule
@@ -246,17 +245,17 @@ void vm_update_sequences(ac_vm *vm, uint32_t rule_index, struct timeval trigger_
         else
             continue;
         int idx = 0;
-        struct timeval first = {0};
-        struct timeval last = {0};
+        struct ac_timeval first = {0};
+        struct ac_timeval last = {0};
         int sequential = TRUE;
 
-        for (int j = 0; j < s->rule_count; j++) // iter starts
+        for (uint32_t j = 0; j < s->rule_count; j++) // iter starts
         {
             const vm_monrule *r = hashmap_get(s->monitored_rules, &(vm_monrule){s->rule_indices[j]});
             if (!r->trigger.tv_sec
                 || (r->trigger.tv_sec
                     && !(r->trigger.tv_sec >= last.tv_sec
-                    && r->trigger.tv_usec > last.tv_usec)))
+                    && r->trigger.tv_usec >= last.tv_usec)))
             {
                 sequential = FALSE;
                 break;
@@ -326,7 +325,7 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize, void *exec_
         esize - 8 - etypelen))
         return AC_ERROR_BAD_DATA;
 
-    for (int i = 0; i < vm->cpl->nrules; i++)
+    for (uint32_t i = 0; i < vm->cpl->nrules; i++)
     {
         ac_rule_entry *entry = &vm->cpl->rule_table[i];
         if (entry->module_ordinal)
@@ -345,8 +344,8 @@ ac_error ac_vm_exec(ac_vm *vm, unsigned char *event, uint32_t esize, void *exec_
                 }
                 if (triggered)
                 {
-                    struct timeval tv = {0};
-                    gettimeofday(&tv, NULL);
+                    struct ac_timeval tv = {0};
+                    ac_gettimeofday(&tv, NULL);
                     // report rule has been triggered only if it is not anonymous or private
                     if (!(entry->flags & AC_SEQUENCE_RULE || entry->flags & AC_PRIVATE_RULE))
                         vm_report_triggered(vm, AC_VM_RULE, vm->current_rule, tv.tv_sec, exec_context);
@@ -366,7 +365,7 @@ void ac_vm_free(ac_vm *vm)
 {
     if (vm->sequence_table)
     {
-        for (int i = 0; i < vm->cpl->nsequences; i++)
+        for (uint32_t i = 0; i < vm->cpl->nsequences; i++)
         {
             if (vm->sequence_table[i].monitored_rules)
                 hashmap_free(vm->sequence_table[i].monitored_rules);
@@ -391,7 +390,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
     ac_object regs[VM_ACCUM_MAX] = {0};
 
     vm->ip = code;
-    for (int i = 0; i < vm->csp; i++)
+    for (uint32_t i = 0; i < vm->csp; i++)
     {
         if (vm->callstack[i] == (long long)vm->ip)
         {
@@ -784,8 +783,8 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
             {
                 pop(r1)
                 pop(r2)
-                uint32_t r2l = strlen(r2.s);
-                uint32_t r1l = strlen(r1.s);
+                uint32_t r2l = (uint32_t)strlen(r2.s);
+                uint32_t r1l = (uint32_t)strlen(r1.s);
                 DBGPRINT("ENDSWITH: %s endswith %s", r2.s, r1.s);
                 r1.b = r2l >= r1l && strncmp(r2.s + (r2l - r1l), r1.s, r2l) == 0;
                 push(r1)
@@ -798,8 +797,8 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
                 r1.s = lowercase(r1.s);
                 r2.s = lowercase(r2.s);
                 DBGPRINT("IENDSWITH: %s iendswith %s", r2.s, r1.s);
-                uint32_t r2l = strlen(r2.s);
-                uint32_t r1l = strlen(r1.s);
+                uint32_t r2l = (uint32_t)strlen(r2.s);
+                uint32_t r1l = (uint32_t)strlen(r1.s);
                 uint32_t b = r2l >= r1l && strncmp(r2.s + (r2l - r1l), r1.s, r2l) == 0;
                 ac_free(r1.s);
                 ac_free(r2.s);
@@ -855,7 +854,7 @@ ac_error ac_vm_exec_code(ac_vm *vm, unsigned char *code, uint32_t *result)
             {
                 pop(r1)
                 DBGPRINT("STRLEN: %s", r1.s);
-                r1.i = strlen(r1.s);
+                r1.i = (uint32_t)strlen(r1.s);
                 push(r1)
             }
             break;

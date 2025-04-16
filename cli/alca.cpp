@@ -97,7 +97,6 @@ int check_recv(const int rc)
     }
     if (rc < 0)
     {
-        flogf(stderr, "[erro]", "failed to receive data: %d", rc);
         return -1;
     }
     return 0;
@@ -387,7 +386,7 @@ int run(const std::string &binpath, const std::vector<std::string> &rulePaths, i
     if ((rc = compile_rules(compiler, rulePaths)) != AC_ERROR_SUCCESS)
     {
         flogf(stderr, "[erro]", "[%d] failed to compile rules (got %d error(s)):", rc, compiler->error_count);
-        for (int i = 0; i < compiler->error_count; i++)
+        for (uint32_t i = 0; i < compiler->error_count; i++)
         {
             const ac_compiler_error& err = compiler->errors[i];
             flogf(stderr, "[erro]", "  C%d: %s", err.code, err.message);

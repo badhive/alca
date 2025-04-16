@@ -19,6 +19,9 @@
 #include <alca/defaults.h>
 
 #ifdef WIN32
+#if defined(_MSC_VER)
+#pragma comment(lib, "ws2_32.lib")
+#endif
 #include <ws2tcpip.h>
 #else
 #include <sys/types.h>
@@ -33,9 +36,14 @@ ac_error network_fn_nslookup_v4(ac_module *fn_object, ac_object *args, ac_object
     const char *ip = args[0].s;
     const int port = args[1].i;
     char *host = ac_alloc(NI_MAXHOST);
+
+    struct in_addr ip_addr = { 0 };
+    if (inet_pton(AF_INET6, ip, &ip_addr) != 1)
+        return AC_ERROR_UNSUCCESSFUL;
+
     struct sockaddr_in addr = {
         .sin_family = AF_INET,
-        .sin_addr.s_addr = inet_addr(ip),
+        .sin_addr = ip_addr,
         .sin_port = htons(port),
     };
     rc = getnameinfo((struct sockaddr *)&addr,
@@ -61,14 +69,14 @@ ac_error network_fn_nslookup_v6(ac_module *fn_object, ac_object *args, ac_object
     const char *ip = args[0].s;
     const int port = args[1].i;
 
-    struct in6_addr addr6 = {0};
-    if (inet_pton(AF_INET6, ip, &addr6) != 1)
+    struct in6_addr ip_addr6 = {0};
+    if (inet_pton(AF_INET6, ip, &ip_addr6) != 1)
         return AC_ERROR_UNSUCCESSFUL;
 
     char *host = ac_alloc(NI_MAXHOST);
     struct sockaddr_in6 addr = {
         .sin6_family = AF_INET6,
-        .sin6_addr = addr6,
+        .sin6_addr = ip_addr6,
         .sin6_port = htons(port),
     };
     rc = getnameinfo((struct sockaddr *)&addr,

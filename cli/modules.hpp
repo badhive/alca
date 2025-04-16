@@ -26,10 +26,10 @@
         int unmarshal_callback(ac_module *module, const unsigned char *event_data, size_t data_size); \
         \
         static ac_module_table_entry module_entry = { \
-            .name = #module, \
-            .load_callback = ac_default_##module##_load_callback, \
-            .unload_callback = ac_default_##module##_unload_callback, \
-            .unmarshal_callback = unmarshal_callback, \
+            #module, \
+            ac_default_##module##_load_callback, \
+            ac_default_##module##_unload_callback, \
+            unmarshal_callback, \
         }; \
     } \
 

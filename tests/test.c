@@ -183,7 +183,7 @@ int ac_test_module_file_unmarshal(ac_module *module, const unsigned char *edata)
     return TRUE;
 }
 
-void ac_test_module_file_unload(const ac_module*)
+void ac_test_module_file_unload(const ac_module* module)
 {}
 
 ac_module *ac_test_module_file_callback()
